@@ -1,5 +1,5 @@
 # TarsOnlineCogs
-Cogs for my Redbot v3 instances
+Cogs for my Discord Redbot v3 instances
 
 # Contents
 - `cafewelcome` - Sends a python crafted ASCII Banner as a welcome message.
