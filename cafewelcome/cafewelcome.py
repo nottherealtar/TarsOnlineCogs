@@ -15,11 +15,11 @@ class CafeWelcome(commands.Cog):
 
         # Do it like this because the welcome image might take some time to make, and the bot would freeze otherwise.
         welcome_image = await self.bot.loop.run_in_executor(None, lambda: create_welcome(member, avatar, member.guild.member_count))
-        
+        msg = _("Welcome!").format(channel=welcome_channel)
         welcome_channel = discord.utils.get(ctx.guild.text_channels, name="welcome")
         if welcome_channel:
             with open(welcome_image, "rb") as file:
-                await welcome_channel.send(file=discord.File(file, "welcome.gif"))
+        await ctx.send(msg)
         else:
             await ctx.send("The 'welcome' channel does not exist on this server.")
 
