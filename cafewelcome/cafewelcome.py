@@ -5,6 +5,7 @@ import textwrap
 from io import BytesIO
 
 class CafeWelcome(commands.Cog):
+    """ An Ascii themed Welcome GIF."""
     def __init__(self, bot: commands.Bot):
         self.bot = bot
     
