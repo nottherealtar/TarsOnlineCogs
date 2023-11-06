@@ -19,7 +19,7 @@ class CafeWelcome(commands.Cog):
         welcome_channel = discord.utils.get(ctx.guild.text_channels, name="welcome")
         if welcome_channel:
             with open(welcome_image, "rb") as file:
-        await ctx.send(msg)
+            await ctx.send(msg)
         else:
             await ctx.send("The 'welcome' channel does not exist on this server.")
 
