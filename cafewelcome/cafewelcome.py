@@ -163,4 +163,9 @@ if target_channel:
     await target_channel.send(file=discord.File(welcome_image, "welcome.gif"))
 else:
     # Handle the case where the target channel is not found
-    await member.guild.text_channels[0].send("Welcome channel not found. Please configure the correct channel.")
+    async def send_welcome_to_channel(target_channel, welcome_image):
+    await target_channel.send(file=discord.File(welcome_image, "welcome.gif"))
+
+# Usage example:
+await send_welcome_to_channel(target_channel, welcome_image)
+
