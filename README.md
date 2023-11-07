@@ -7,7 +7,7 @@ Cogs for my Discord Redbot v3 instances
 > ![Preview](https://cdn.discordapp.com/attachments/614909956881121308/1057270424502816788/welcome-for-178603029115830282.gif)
 
 -----------------------------------------------------------------------------------------
-## To-Do:
-> Finish the Welcome Banner Cog
-> Github Intergration Cog/Webhook
+> ## To-Do:
+-  Finish the Welcome Banner Cog
+-  Github Intergration Cog/Webhook
 
