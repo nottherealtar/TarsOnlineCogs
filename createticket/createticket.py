@@ -5,7 +5,7 @@ import os
 import requests
 import aiohttp
 
-class FreshdeskCog(commands.Cog):
+class createticket(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.session = aiohttp.ClientSession()
