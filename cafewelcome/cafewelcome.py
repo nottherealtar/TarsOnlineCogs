@@ -19,9 +19,9 @@ class CafeWelcome(commands.Cog):
         welcome_channel = discord.utils.get(ctx.guild.text_channels, name="welcome")
         if welcome_channel:
             with open(welcome_image, "rb") as file:
-            await ctx.send(msg)
+                await ctx.send(msg)
         else:
-            await ctx.send("The 'welcome' channel does not exist on this server.")
+                await ctx.send("The 'welcome' channel does not exist on this server.")
 
 # Credit for the ascii art (it's slightly modified though) -> https://www.geeksforgeeks.org/converting-image-ascii-image-python/
     gscale1 = "$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\|()1{}[]?-_+~<>i!lI;:,\"^`'. "
