@@ -3,11 +3,17 @@ from discord import Embed
 from datetime import datetime
 
 class ProjectPost(commands.Cog):
+    """
+    Enables the user to create and send an easy embed. eg: is for new release
+    """
     def __init__(self, bot):
         self.bot = bot
 
     @commands.command()
     async def projectpost(self, ctx):
+        """
+        Enables the user to create and send an easy embed.
+        """
         github_thumbnail = "https://cdn.discordapp.com/attachments/1170989523895865424/1171787440583872512/Github.png"
 
         # Function to delete messages
