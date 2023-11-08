@@ -12,37 +12,39 @@ class ProjectPost(commands.Cog):
         question0 = await ctx.send("Is it a GitHub project? (yes/no)")
 
         def check(m):
-            return m.author == ctx.author and m.channel == ctx.channel
+            return m.author == ctx.author and m.channel == ctx.channel and m.content.lower() in ["yes", "no"]
 
         is_github_message = await self.bot.wait_for("message", check=check)
         is_github = is_github_message.content.lower()
-
-        if is_github == "yes":
-            github_thumbnail = "https://cdn.discordapp.com/attachments/1170989523895865424/1171787440583872512/Github.png"
-        else:
-            github_thumbnail = None
 
         # Delete the user's input messages and the bot's questions
         await question0.delete()
         await is_github_message.delete()
         await ctx.message.delete()
 
-        # If it's not a GitHub project, proceed with the rest of the questions
-        if is_github != "no":
-            await ctx.send("Invalid input. Please answer with 'yes' or 'no'.")
-            return
+        if is_github == "yes":
+            # Ask for the GitHub thumbnail
+            question1 = await ctx.send("Please provide the **GitHub thumbnail URL**:")
+            github_thumbnail_message = await self.bot.wait_for("message", check=lambda m: m.author == ctx.author)
+            github_thumbnail = github_thumbnail_message.content
+
+            # Delete the user's input messages and the bot's questions
+            await question1.delete()
+            await github_thumbnail_message.delete()
+        else:
+            github_thumbnail = None
 
         # Ask for the user's name
-        question1 = await ctx.send("What's your **name**?")
-        author_name = await self.bot.wait_for("message", check=check)
+        question2 = await ctx.send("What's your **name**?")
+        author_name = await self.bot.wait_for("message", check=lambda m: m.author == ctx.author)
 
         # Ask for the project title
-        question2 = await ctx.send("What's the **project title**?")
-        project_title = await self.bot.wait_for("message", check=check)
+        question3 = await ctx.send("What's the **project title**?")
+        project_title = await self.bot.wait_for("message", check=lambda m: m.author == ctx.author)
 
         # Ask for the URL to the project
-        question3 = await ctx.send("What's the **URL to the project**?")
-        project_url = await self.bot.wait_for("message", check=check)
+        question4 = await ctx.send("What's the **URL to the project**?")
+        project_url = await self.bot.wait_for("message", check=lambda m: m.author == ctx.author)
 
         # Create the timestamp for the current time
         timestamp = datetime.now()
@@ -55,9 +57,9 @@ class ProjectPost(commands.Cog):
         embed.set_footer(text=f"Posted at {timestamp}")
 
         # Delete the user's input messages and the bot's questions
-        await question1.delete()
         await question2.delete()
         await question3.delete()
+        await question4.delete()
         await ctx.message.delete()
 
         # Send the nicely formatted embed to the channel
