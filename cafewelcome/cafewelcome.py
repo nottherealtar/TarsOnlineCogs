@@ -167,5 +167,5 @@ class CafeWelcome(commands.Cog):
 
             if welcome_channel:
             avatar = await member.avatar.read()
-            welcome_image = await self.bot.loop.run_in_executor(None, lambda: self.create_welcome(member, avatar, member.guild.member_count))
+            welcome_image = await self.bot.loop.self.create_welcome(member, avatar, member.guild.member_count)
             await welcome_channel.send(file=discord.File(welcome_image, "welcome.gif"))
