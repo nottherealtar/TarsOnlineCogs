@@ -18,11 +18,15 @@ class ProjectPost(commands.Cog):
         is_github = is_github_message.content.lower()
 
         # Delete the user's input messages and the bot's questions
+        await question0.delete()
         await is_github_message.delete()
         await ctx.message.delete()
 
         if is_github == "yes":
-            github_thumbnail = "https://cdn.discordapp.com/attachments/1170989523895865424/1171787440583872512/Github.png"
+            # Ask for the GitHub thumbnail
+            question1 = await ctx.send("Please provide the **GitHub thumbnail URL**:")
+            github_thumbnail_message = await self.bot.wait_for("message", check=lambda m: m.author == ctx.author)
+            github_thumbnail = github_thumbnail_message.content
 
             # Delete the user's input messages and the bot's questions
             await question1.delete()
@@ -53,7 +57,6 @@ class ProjectPost(commands.Cog):
         embed.set_footer(text=f"Posted at {timestamp}")
 
         # Delete the user's input messages and the bot's questions
-        await question0.delete()
         await question2.delete()
         await question3.delete()
         await question4.delete()
