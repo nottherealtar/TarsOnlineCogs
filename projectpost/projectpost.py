@@ -41,7 +41,7 @@ class ProjectPost(commands.Cog):
             await ctx.message.delete()  # Delete the command message
             return
 
-        messages_to_delete.append(question3)
+        messages_to_delete.extend([question3, project_url_message])
 
         # Create the timestamp for the current time
         timestamp = datetime.now()
