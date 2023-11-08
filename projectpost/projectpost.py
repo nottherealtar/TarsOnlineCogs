@@ -18,7 +18,6 @@ class ProjectPost(commands.Cog):
         is_github = is_github_message.content.lower()
 
         # Delete the user's input messages and the bot's questions
-        await question0.delete()
         await is_github_message.delete()
         await ctx.message.delete()
 
@@ -35,19 +34,13 @@ class ProjectPost(commands.Cog):
         question2 = await ctx.send("What's your **name**?")
         author_name = await self.bot.wait_for("message", check=lambda m: m.author == ctx.author)
 
-        await question2.delete()
-
         # Ask for the project title
         question3 = await ctx.send("What's the **project title**?")
         project_title = await self.bot.wait_for("message", check=lambda m: m.author == ctx.author)
 
-        await question3.delete()
-
         # Ask for the URL to the project
         question4 = await ctx.send("What's the **URL to the project**?")
         project_url = await self.bot.wait_for("message", check=lambda m: m.author == ctx.author)
-
-        await question4.delete()
 
         # Create the timestamp for the current time
         timestamp = datetime.now()
@@ -60,6 +53,10 @@ class ProjectPost(commands.Cog):
         embed.set_footer(text=f"Posted at {timestamp}")
 
         # Delete the user's input messages and the bot's questions
+        await question0.delete()
+        await question2.delete()
+        await question3.delete()
+        await question4.delete()
         await ctx.message.delete()
 
         # Send the nicely formatted embed to the channel
