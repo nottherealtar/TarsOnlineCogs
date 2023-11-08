@@ -18,6 +18,6 @@ class TeachMe(commands.Cog):
             quote_data = random.choice(data)
             quote = quote_data["q"]
             author = quote_data["a"]
-            await ctx.send(f"{quote} - {author}")
+            await ctx.send(f"``{quote}`` - ``{author}``")
         else:
             await ctx.send("Failed to retrieve a random quote. Please try again later.")
