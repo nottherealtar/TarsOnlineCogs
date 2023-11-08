@@ -7,6 +7,7 @@ from io import BytesIO
 import numpy as np
 import random
 import aiohttp
+import os
 
 gscale1 = "$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\|()1{}[]?-_+~<>i!lI;:,\"^`'. "
 gscale2 = ' .:-=+*#%@'
