@@ -23,14 +23,22 @@ class ProjectPost(commands.Cog):
         # Create the timestamp for the current time
         timestamp = datetime.now()
 
-        # Create the embed with the timestamp in the footer
+        # Check if the project URL is from GitHub
+        is_github = project_url.content.startswith("https://github.com/")
+
+        # Create the embed with or without a thumbnail
         embed = Embed(title=project_title.content, url=project_url.content, description=f"Author: {author_name.content}")
         embed.set_footer(text=f"Posted at {timestamp}")
 
-        # Send the embed to the channel
-        await ctx.send(embed=embed)
+        # If the URL is from GitHub, add a thumbnail
+        if is_github:
+            embed.set_thumbnail(url="https://cdn.discordapp.com/attachments/1170989523895865424/1171787440583872512/Github.png")
 
-        # Delete the user's messages
+        # Delete the user's input messages and the bot's questions
+        await ctx.message.delete()
         await author_name.delete()
         await project_title.delete()
         await project_url.delete()
+
+        # Send the embed to the channel
+        await ctx.send(embed=embed)
