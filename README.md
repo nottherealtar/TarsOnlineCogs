@@ -7,7 +7,7 @@ Cogs for my Discord Redbot v3 instances
 > ![Preview](https://cdn.discordapp.com/attachments/614909956881121308/1057270424502816788/welcome-for-178603029115830282.gif)
 - `assky` - Sends a random Ascii emoji
 - `teachme` - Sends you a quote to get wiser <3
-
+- `projectpost` - Config a quick embed for project posting purposes.
 -----------------------------------------------------------------------------------------
 > ## To-Do:
 -  Finish the Welcome Banner Cog
