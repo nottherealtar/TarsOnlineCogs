@@ -1,11 +1,3 @@
-#
-#  _   _  ___ _____ _____ _   _ _____ ____  _____    _    _   _____  _    ____  
-# | \ | |/ _ \_   _|_   _| | | | ____|  _ \| ____|  / \  | | |_   _|/ \  |  _ \ 
-# |  \| | | | || |   | | | |_| |  _| | |_) |  _|   / _ \ | |   | | / _ \ | |_) |
-# | |\  | |_| || |   | | |  _  | |___|  _ <| |___ / ___ \| |___| |/ ___ \|  _ < 
-# |_| \_|\___/ |_|   |_| |_| |_|_____|_| \_\_____/_/   \_\_____|_/_/   \_\_| \_\
-# 
-
 from redbot.core import commands
 from discord import Embed
 from datetime import datetime
@@ -16,6 +8,15 @@ class ProjectPost(commands.Cog):
 
     @commands.command()
     async def projectpost(self, ctx):
+        # Ask if it's a GitHub project
+        question0 = await ctx.send("Is it a GitHub project? (yes/no)")
+        is_github = await self.bot.wait_for("message", check=lambda m: m.author == ctx.author)
+
+        if is_github.content.lower() == "yes":
+            github_thumbnail = "https://cdn.discordapp.com/attachments/1170989523895865424/1171787440583872512/Github.png"
+        else:
+            github_thumbnail = None
+
         # Ask for the user's name
         question1 = await ctx.send("What's your **name**?")
         author_name = await self.bot.wait_for("message", check=lambda m: m.author == ctx.author)
@@ -31,19 +32,15 @@ class ProjectPost(commands.Cog):
         # Create the timestamp for the current time
         timestamp = datetime.now()
 
-        # Check if the project URL is from GitHub
-        is_github = project_url.content.startswith("https://github.com/")
-
         # Create the nicely formatted embed
         embed = Embed(title=project_title.content, url=project_url.content)
         embed.description = f"**Author:** {author_name.content}"
+        if github_thumbnail:
+            embed.set_thumbnail(url=github_thumbnail)
         embed.set_footer(text=f"Posted at {timestamp}")
 
-        # If the URL is from GitHub, add a thumbnail
-        if is_github:
-            embed.set_thumbnail(url="https://cdn.discordapp.com/attachments/1170989523895865424/1171787440583872512/Github.png")
-
         # Delete the user's input messages and the bot's questions
+        await question0.delete()
         await question1.delete()
         await question2.delete()
         await question3.delete()
