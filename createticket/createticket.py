@@ -5,14 +5,14 @@ import os
 import requests
 import aiohttp
 
-class createticket(commands.Cog):
+class CreateTicket(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.session = aiohttp.ClientSession()
         self.role_config_file = os.path.join(os.path.dirname(__file__), "roles_config.json")
 
     @commands.command()
-    async def create_ticket(self, ctx):
+    async def createticket(self, ctx):
         await ctx.send("Let's create a Freshdesk ticket. Please provide the following information.")
 
         def check(message):

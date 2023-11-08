@@ -1,4 +1,4 @@
-from .assky import assky
+from .assky import AsSky
 
 async def setup(bot):
-    await bot.add_cog(assky(bot))
+    await bot.add_cog(AsSky(bot))

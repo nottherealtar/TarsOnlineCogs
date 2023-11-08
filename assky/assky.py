@@ -4,7 +4,7 @@ import discord
 from redbot.core import commands, app_commands
 import os
 
-class asskyc(commands.Cog):
+class AsSky(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.base_url = "http://artii.herokuapp.com/fonts_list"

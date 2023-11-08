@@ -1,4 +1,4 @@
-from .createticket import createticket
+from .createticket import CreateTicket
 
 async def setup(bot):
-    await bot.add_cog(createticket(bot))
+    await bot.add_cog(CreateTicket(bot))
