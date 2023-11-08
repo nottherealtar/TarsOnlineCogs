@@ -140,3 +140,5 @@ class AsSky(commands.Cog):
 
         random_emoji = random.choice(emojis)
         await ctx.send(random_emoji)
+        else:
+            await ctx.send("Failed to retrieve a random emoji. Please try again later.")
