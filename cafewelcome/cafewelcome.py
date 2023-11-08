@@ -1,41 +1,27 @@
-import discord
-from redbot.core import commands
+import disnake
+from disnake.ext import commands
 from PIL import Image, ImageFont, ImageDraw, ImageStat
 import textwrap
 from io import BytesIO
+import numpy as np
+import random
+import aiohttp
+
+gscale1 = "$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\|()1{}[]?-_+~<>i!lI;:,\"^`'. "
+gscale2 = ' .:-=+*#%@'
 
 class CafeWelcome(commands.Cog):
-    """ An Ascii themed Welcome GIF."""
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot):
         self.bot = bot
-    
-    @commands.Cog.listener()
-    async def on_member_join(self, member: discord.Member):
-        avatar = await member.display_avatar.read()
 
-        # Do it like this because the welcome image might take some time to make, and the bot would freeze otherwise.
-        welcome_image = await self.bot.loop.run_in_executor(None, lambda: create_welcome(member, avatar, member.guild.member_count))
-        msg = _("Welcome!").format(channel=welcome_channel)
-        welcome_channel = discord.utils.get(ctx.guild.text_channels, name="welcome")
-        if welcome_channel:
-            with open(welcome_image, "rb") as file:
-                await ctx.send(msg)
-        else:
-                await ctx.send("The 'welcome' channel does not exist on this server.")
-
-# Credit for the ascii art (it's slightly modified though) -> https://www.geeksforgeeks.org/converting-image-ascii-image-python/
-    gscale1 = "$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\|()1{}[]?-_+~<>i!lI;:,\"^`'. "
-
-    gscale2 = ' .:-=+*#%@'
-
-    def getAverageL(image: Image.Image):
+    def getAverageL(self, image: Image):
         im = np.array(image)
         w, h = im.shape
         return np.average(im.reshape(w * h))
 
-    def covertImageToAscii(IMAGE: Image.Image, cols: int, scale: float, moreLevels: bool):
+    def covertImageToAscii(self, image: Image, cols: int, scale: float, moreLevels: bool):
         global gscale1, gscale2
-        image = IMAGE.convert('L')
+        image = image.convert('L')
         W, H = image.size
         w = W / cols
         h = w / scale
@@ -60,7 +46,7 @@ class CafeWelcome(commands.Cog):
                 if i == cols - 1:
                     x2 = W
                 img = image.crop((x1, y1, x2, y2))
-                avg = int(getAverageL(img))
+                avg = int(self.getAverageL(img))
 
                 if moreLevels:
                     gsval = gscale1[int((avg * 69) / 255)]
@@ -70,26 +56,26 @@ class CafeWelcome(commands.Cog):
                 aimg[j] += gsval
         return aimg
 
-    def ascii_art(image: BytesIO, more_levels=False):
+    def ascii_art(self, image: BytesIO, more_levels=False):
         scale = 0.65
         cols = 100
 
         image = Image.open(image)
 
-        aimg = covertImageToAscii(image, cols, scale, more_levels)
+        aimg = self.covertImageToAscii(image, cols, scale, more_levels)
         return aimg
 
-    def brightness_level(image: Image.Image):
+    def brightness_level(self, image: Image.Image):
         image = image.convert('L')
         stat = ImageStat.Stat(image)
         return stat.mean[0]
 
-    def create_welcome(user: discord.Member, user_avatar, join_pos):
+    async def create_welcome(self, user: disnake.Member, user_avatar, join_pos):
         canvas = Image.new('RGB', (600, 250), (0, 0, 0, 1))
 
         image_array = [canvas]
 
-        text_color = (108, 247, 80)
+        text_color = 108, 247, 80
         info_font = ImageFont.truetype("assets/fonts/terminal.ttf", size=15)
         welcome_font = ImageFont.truetype("assets/fonts/terminal.ttf", size=20)
         name_font = ImageFont.truetype("assets/fonts/terminal.ttf", size=30)
@@ -106,7 +92,8 @@ class CafeWelcome(commands.Cog):
         for letter_range in range(len(WELCOME_TEXT)):
             im = image_array[-1].copy()
             draw = ImageDraw.Draw(im)
-            draw.text((5 + (welcome_font.size - 5) * letter_range, 5), WELCOME_TEXT[letter_range], fill=text_color, font=welcome_font)
+            draw.text((5 + (welcome_font.size - 5) * letter_range, 5), WELCOME_TEXT[letter_range], fill=text_color,
+                      font=welcome_font)
             image_array.append(im)
 
         # DELAY BEFORE WRITING THE NAME
@@ -115,7 +102,8 @@ class CafeWelcome(commands.Cog):
         for letter_range in range(len(NAME_TEXT)):
             im = image_array[-1].copy()
             draw = ImageDraw.Draw(im)
-            draw.text((5 + (name_font.size - 10) * letter_range, 30), NAME_TEXT[letter_range], fill=text_color, font=name_font)
+            draw.text((5 + (name_font.size - 10) * letter_range, 30), NAME_TEXT[letter_range], fill=text_color,
+                      font=name_font)
             image_array.append(im)
 
         # DELAY BEFORE WRITING THE INFO
@@ -125,16 +113,18 @@ class CafeWelcome(commands.Cog):
             for letter_range in range(len(line)):
                 im = image_array[-1].copy()
                 draw = ImageDraw.Draw(im)
-                draw.text((5 + (info_font.size - 5) * letter_range, 80 + 20 * index), line[letter_range], fill=text_color, font=info_font)
+                draw.text((5 + (info_font.size - 5) * letter_range, 80 + 20 * index), line[letter_range], fill=text_color,
+                          font=info_font)
                 image_array.append(im)
 
         # DELAY BEFORE DRAWING THE IMAGE
         image_array += [image_array[-1] for _ in range(2)]
 
-        brightness = brightness_level(Image.open(BytesIO(user_avatar)))
-        ascii = ascii_art(BytesIO(user_avatar), more_levels=brightness > 170)
+        brightness = self.brightness_level(Image.open(BytesIO(user_avatar)))
+        ascii = self.ascii_art(BytesIO(user_avatar), more_levels=brightness > 170)
 
-        if not ascii: return
+        if not ascii:
+            return
 
         ascii_len = len(ascii) * ascii_font.size
 
@@ -155,3 +145,10 @@ class CafeWelcome(commands.Cog):
         img.seek(0)
 
         return img
+
+    @commands.Cog.listener()
+    async def on_member_join(self, member: disnake.Member):
+        async with aiohttp.ClientSession() as session:
+            avatar = await member.avatar.read()
+            welcome_image = await self.bot.loop.run_in_executor(None, lambda: self.create_welcome(member, avatar, member.guild.member_count))
+            await member.guild.text_channels[0].send(file=disnake.File(welcome_image, "welcome.gif"))
