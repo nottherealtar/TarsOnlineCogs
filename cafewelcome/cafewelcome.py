@@ -20,17 +20,7 @@ class CafeWelcome(commands.Cog):
         self.config.register_guild(
             welcome_channel_id=1170982822966722603,  # Replace with your desired default channel ID
         )
-
-        # Create or load the welcome settings file
-        self.settings_file = "welcome.json"
-        if not os.path.exists(self.settings_file):
-            default_settings = {
-                "welcome_channel_id": 1170982822966722603  # Replace with your desired default channel ID
-            }
-            with open(self.settings_file, "w") as json_file:
-                json.dump(default_settings, json_file, indent=4)
-
-
+        
     def getAverageL(self, image: Image):
         im = np.array(image)
         w, h = im.shape
@@ -176,7 +166,6 @@ class CafeWelcome(commands.Cog):
             welcome_channel = member.guild.get_channel(welcome_channel_id)
 
             if welcome_channel:
-            async with aiohttp.ClientSession() as session:
             avatar = await member.avatar.read()
             welcome_image = await self.bot.loop.run_in_executor(None, lambda: self.create_welcome(member, avatar, member.guild.member_count))
             await welcome_channel.send(file=discord.File(welcome_image, "welcome.gif"))
