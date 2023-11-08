@@ -3,6 +3,9 @@ from redbot.core import commands
 import random
 
 class AsSky(commands.Cog):
+    """
+    This cog Produces random ASCII emojis when executed.
+    """
     def __init__(self, bot):
         self.bot = bot
 
