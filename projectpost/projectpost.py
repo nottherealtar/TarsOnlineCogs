@@ -32,11 +32,13 @@ class ProjectPost(commands.Cog):
         if project_url_message.content.lower() == "cancel":
             await delete_messages(messages_to_delete)
             await ctx.send("Project post canceled.")
+            await ctx.message.delete()  # Delete the command message
             return
 
         if not project_url_message.content.startswith(("http://", "https://")):
             await delete_messages(messages_to_delete)
             await ctx.send("Invalid URL format. Project post canceled.")
+            await ctx.message.delete()  # Delete the command message
             return
 
         messages_to_delete.append(question3)
@@ -52,6 +54,9 @@ class ProjectPost(commands.Cog):
 
         # Delete all messages used in the process
         await delete_messages(messages_to_delete)
+
+        # Delete the command message
+        await ctx.message.delete()
 
         # Send the nicely formatted embed to the channel
         await ctx.send(embed=embed)
