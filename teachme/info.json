@@ -1,0 +1,16 @@
+{
+    "author": [
+        "nottherealtar"
+    ],
+    "install_msg": "`[p]help teachme`",
+    "name": "teachme",
+    "short": "Makes you wiser",
+    "description": "Makes you wiser none-the-less, Pumps quotes\nWARNING: IRL SPOILERS",
+    "min_bot_version": "3.5.0",
+    "tags": [
+        "quotes",
+        "text",
+        "fun"
+    ],
+    "end_user_data_statement": "This cog does not persistently store any data or metadata about users."
+}
