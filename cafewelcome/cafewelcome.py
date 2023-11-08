@@ -7,6 +7,7 @@ from io import BytesIO
 import numpy as np
 import random
 import aiohttp
+import json
 import os
 
 gscale1 = "$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\|()1{}[]?-_+~<>i!lI;:,\"^`'. "
@@ -16,16 +17,17 @@ class CafeWelcome(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=1234567890)
-        
-        # Check if the settings file exists, and create it if not
-        settings_file = os.path.join(self.data_folder, "welcome.json")
-        if not os.path.exists(settings_file):
+        self.config.register_guild(
+            welcome_channel_id=1170982822966722603,  # Replace with your desired default channel ID
+        )
+
+        # Create or load the welcome settings file
+        self.settings_file = "welcome.json"
+        if not os.path.exists(self.settings_file):
             default_settings = {
-                "WelcomeSettings": {
-                    "welcome_channel_id": 1170982822966722603  # Replace with your desired default channel ID
-                }
+                "welcome_channel_id": 1170982822966722603  # Replace with your desired default channel ID
             }
-            with open(settings_file, "w") as json_file:
+            with open(self.settings_file, "w") as json_file:
                 json.dump(default_settings, json_file, indent=4)
 
 
