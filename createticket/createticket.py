@@ -10,18 +10,6 @@ class createticket(commands.Cog):
         self.bot = bot
         self.session = aiohttp.ClientSession()
         self.role_config_file = os.path.join(os.path.dirname(__file__), "roles_config.json")
-        self.load_roles()
-
-    def load_roles(self):
-        try:
-            with open(self.role_config_file, "r") as f:
-                self.allowed_roles = json.load(f)
-        except FileNotFoundError:
-            self.allowed_roles = {}
-
-    def save_roles(self):
-        with open(self.role_config_file, "w") as f:
-            json.dump(self.allowed_roles, f)
 
     @commands.command()
     async def create_ticket(self, ctx):
@@ -30,8 +18,16 @@ class createticket(commands.Cog):
         def check(message):
             return message.author == ctx.message.author
 
-        ticket_data = {}
-        ticket_data["ticketid"] = ctx.message.id  # You can use a unique identifier for ticket ID
+        ticket_data = {
+            "helpdesk_ticket": {
+                "description": None,
+                "subject": None,
+                "email": None,
+                "status": 2,
+                "priority": 1
+            }
+        }
+
         await ctx.send("Please enter the Title of your ticket:")
         description = await self.bot.wait_for('message', check=check)
         ticket_data["description"] = description.content
@@ -63,3 +59,5 @@ class createticket(commands.Cog):
             await ctx.send("Ticket created successfully")
         else:
             await ctx.send(f"Failed to create the ticket. Status code: {response.status_code}")
+        if response.status_code == 400:
+            await ctx.send(f"**Response code 400 = **")
