@@ -170,13 +170,13 @@ class CafeWelcome(commands.Cog):
 
             return img
 
-@commands.Cog.listener()
-async def on_member_join(self, member: discord.Member):
-    welcome_channel_id = await self.config.guild(member.guild).welcome_channel_id()
-    welcome_channel = member.guild.get_channel(welcome_channel_id)
+            @commands.Cog.listener()
+            async def on_member_join(self, member: discord.Member):
+            welcome_channel_id = await self.config.guild(member.guild).welcome_channel_id()
+            welcome_channel = member.guild.get_channel(welcome_channel_id)
 
-    if welcome_channel:
-        async with aiohttp.ClientSession() as session:
+            if welcome_channel:
+            async with aiohttp.ClientSession() as session:
             avatar = await member.avatar.read()
             welcome_image = await self.bot.loop.run_in_executor(None, lambda: self.create_welcome(member, avatar, member.guild.member_count))
             await welcome_channel.send(file=discord.File(welcome_image, "welcome.gif"))
