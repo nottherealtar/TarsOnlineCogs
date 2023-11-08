@@ -11,6 +11,9 @@ class AsSky(commands.Cog):
 
     @commands.command()
     async def assky(self, ctx):
+        """
+        List of about 100 random ASCII emojis
+        """
         # List of about 100 random ASCII emojis
         emojis = [
             "( •_•)>⌐■-■",

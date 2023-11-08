@@ -9,6 +9,9 @@ class TeachMe(commands.Cog):
 
     @commands.command()
     async def teachme(self, ctx):
+        """
+        Retrieves a random Quote from ZenQuotes.io.
+        """
         url = "https://zenquotes.io/api/random"
         response = requests.get(url)
         data = response.json()
