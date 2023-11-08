@@ -1,5 +1,6 @@
-import disnake
-from disnake.ext import commands
+import discord
+from redbot.core import commands
+from redbot.core import Config
 from PIL import Image, ImageFont, ImageDraw, ImageStat
 import textwrap
 from io import BytesIO
@@ -13,13 +14,26 @@ gscale2 = ' .:-=+*#%@'
 class CafeWelcome(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.config = Config.get_conf(self, identifier=1234567890)
+        
+        # Check if the settings file exists, and create it if not
+        settings_file = os.path.join(self.data_folder, "welcome.json")
+        if not os.path.exists(settings_file):
+            default_settings = {
+                "WelcomeSettings": {
+                    "welcome_channel_id": 1170982822966722603  # Replace with your desired default channel ID
+                }
+            }
+            with open(settings_file, "w") as json_file:
+                json.dump(default_settings, json_file, indent=4)
+
 
     def getAverageL(self, image: Image):
         im = np.array(image)
         w, h = im.shape
         return np.average(im.reshape(w * h))
 
-    def covertImageToAscii(self, image: Image, cols: int, scale: float, moreLevels: bool):
+    def convertImageToAscii(self, image: Image, cols: int, scale: float, moreLevels: bool):
         global gscale1, gscale2
         image = image.convert('L')
         W, H = image.size
@@ -62,7 +76,7 @@ class CafeWelcome(commands.Cog):
 
         image = Image.open(image)
 
-        aimg = self.covertImageToAscii(image, cols, scale, more_levels)
+        aimg = self.convertImageToAscii(image, cols, scale, more_levels)
         return aimg
 
     def brightness_level(self, image: Image.Image):
@@ -70,85 +84,92 @@ class CafeWelcome(commands.Cog):
         stat = ImageStat.Stat(image)
         return stat.mean[0]
 
-    async def create_welcome(self, user: disnake.Member, user_avatar, join_pos):
-        canvas = Image.new('RGB', (600, 250), (0, 0, 0, 1))
+    async def create_welcome(self, user: discord.Member, user_avatar, join_pos):
+        guild = user.guild
+        channel_id = await self.config.guild(guild).welcome_channel_id()
 
-        image_array = [canvas]
+        # Get the welcome channel by its ID
+        welcome_channel = guild.get_channel(channel_id)
 
-        text_color = 108, 247, 80
-        info_font = ImageFont.truetype("assets/fonts/terminal.ttf", size=15)
-        welcome_font = ImageFont.truetype("assets/fonts/terminal.ttf", size=20)
-        name_font = ImageFont.truetype("assets/fonts/terminal.ttf", size=30)
-        ascii_font = ImageFont.truetype("assets/fonts/terminal.ttf", size=3)
-        WELCOME_TEXT = "Welcome to BytesToBits,"
-        NAME_TEXT = user.name
-        INFO_TEXT = [
-            f"Subject ID: #{str(join_pos).zfill(4)}",
-            user.created_at.strftime("Since %B %d, %Y"),
-            f"Status: {user.status.name.upper()}",
-            f"Activity:",
-        ] + textwrap.wrap(user.activity.name if user.activity else "UNDETECTED", 25)
+        if welcome_channel:
+            canvas = Image.new('RGB', (600, 250), (0, 0, 0, 1))
 
-        for letter_range in range(len(WELCOME_TEXT)):
-            im = image_array[-1].copy()
-            draw = ImageDraw.Draw(im)
-            draw.text((5 + (welcome_font.size - 5) * letter_range, 5), WELCOME_TEXT[letter_range], fill=text_color,
-                      font=welcome_font)
-            image_array.append(im)
+            image_array = [canvas]
 
-        # DELAY BEFORE WRITING THE NAME
-        image_array += [image_array[-1] for _ in range(2)]
+            text_color = (108, 247, 80)
+            info_font = ImageFont.truetype("assets/fonts/terminal.ttf", size=15)
+            welcome_font = ImageFont.truetype("assets/fonts/terminal.ttf", size=20)
+            name_font = ImageFont.truetype("assets/fonts/terminal.ttf", size=30)
+            ascii_font = ImageFont.truetype("assets/fonts/terminal.ttf", size=3)
+            WELCOME_TEXT = "Welcome to BytesToBits,"
+            NAME_TEXT = user.name
+            INFO_TEXT = [
+                f"Subject ID: #{str(join_pos).zfill(4)}",
+                user.created_at.strftime("Since %B %d, %Y"),
+                f"Status: {user.status.name.upper()}",
+                f"Activity:",
+            ] + textwrap.wrap(user.activity.name if user.activity else "UNDETECTED", 25)
 
-        for letter_range in range(len(NAME_TEXT)):
-            im = image_array[-1].copy()
-            draw = ImageDraw.Draw(im)
-            draw.text((5 + (name_font.size - 10) * letter_range, 30), NAME_TEXT[letter_range], fill=text_color,
-                      font=name_font)
-            image_array.append(im)
-
-        # DELAY BEFORE WRITING THE INFO
-        image_array += [image_array[-1] for _ in range(2)]
-
-        for (index, line) in enumerate(INFO_TEXT):
-            for letter_range in range(len(line)):
+            for letter_range in range(len(WELCOME_TEXT)):
                 im = image_array[-1].copy()
                 draw = ImageDraw.Draw(im)
-                draw.text((5 + (info_font.size - 5) * letter_range, 80 + 20 * index), line[letter_range], fill=text_color,
-                          font=info_font)
+                draw.text((5 + (welcome_font.size - 5) * letter_range, 5), WELCOME_TEXT[letter_range], fill=text_color,
+                          font=welcome_font)
                 image_array.append(im)
 
-        # DELAY BEFORE DRAWING THE IMAGE
-        image_array += [image_array[-1] for _ in range(2)]
+            # DELAY BEFORE WRITING THE NAME
+            image_array += [image_array[-1] for _ in range(2)]
 
-        brightness = self.brightness_level(Image.open(BytesIO(user_avatar)))
-        ascii = self.ascii_art(BytesIO(user_avatar), more_levels=brightness > 170)
+            for letter_range in range(len(NAME_TEXT)):
+                im = image_array[-1].copy()
+                draw = ImageDraw.Draw(im)
+                draw.text((5 + (name_font.size - 10) * letter_range, 30), NAME_TEXT[letter_range], fill=text_color,
+                          font=name_font)
+                image_array.append(im)
 
-        if not ascii:
-            return
+            # DELAY BEFORE WRITING THE INFO
+            image_array += [image_array[-1] for _ in range(2)]
 
-        ascii_len = len(ascii) * ascii_font.size
+            for (index, line) in enumerate(INFO_TEXT):
+                for letter_range in range(len(line)):
+                    im = image_array[-1].copy()
+                    draw = ImageDraw.Draw(im)
+                    draw.text((5 + (info_font.size - 5) * letter_range, 80 + 20 * index), line[letter_range], fill=text_color,
+                              font=info_font)
+                    image_array.append(im)
 
-        ascii_image = Image.new('RGB', (ascii_len, ascii_len), (0, 0, 0))
-        draw = ImageDraw.Draw(ascii_image)
+            # DELAY BEFORE DRAWING THE IMAGE
+            image_array += [image_array[-1] for _ in range(2)]
 
-        for (index, line) in enumerate(ascii):
-            im = ascii_image.copy()
-            draw = ImageDraw.Draw(im)
-            draw.text((0, ascii_font.size * index), line, fill=text_color, font=ascii_font)
-            ascii_image = im
-            im = image_array[-1].copy()
-            im.paste(ascii_image.resize((250, 250)), (350, 0))
-            image_array.append(im)
+            brightness = self.brightness_level(Image.open(BytesIO(user_avatar)))
+            ascii = self.ascii_art(BytesIO(user_avatar), more_levels=brightness > 170)
 
-        img = BytesIO()
-        canvas.save(img, "GIF", save_all=True, append_images=image_array[1:], duration=50)
-        img.seek(0)
+            if not ascii:
+                return
 
-        return img
+            ascii_len = len(ascii) * ascii_font.size
+
+            ascii_image = Image.new('RGB', (ascii_len, ascii_len), (0, 0, 0))
+            draw = ImageDraw.Draw(ascii_image)
+
+            for (index, line) in enumerate(ascii):
+                im = ascii_image.copy()
+                draw = ImageDraw.Draw(im)
+                draw.text((0, ascii_font.size * index), line, fill=text_color, font=ascii_font)
+                ascii_image = im
+                im = image_array[-1].copy()
+                im.paste(ascii_image.resize((250, 250)), (350, 0))
+                image_array.append(im)
+
+            img = BytesIO()
+            canvas.save(img, "GIF", save_all=True, append_images=image_array[1:], duration=50)
+            img.seek(0)
+
+            return img
 
     @commands.Cog.listener()
-    async def on_member_join(self, member: disnake.Member):
+    async def on_member_join(self, member: discord.Member):
         async with aiohttp.ClientSession() as session:
             avatar = await member.avatar.read()
             welcome_image = await self.bot.loop.run_in_executor(None, lambda: self.create_welcome(member, avatar, member.guild.member_count))
-            await member.guild.text_channels[0].send(file=disnake.File(welcome_image, "welcome.gif"))
+            await welcome_channel.send(file=discord.File(welcome_image, "welcome.gif"))
