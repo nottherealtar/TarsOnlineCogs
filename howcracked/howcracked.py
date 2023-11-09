@@ -24,7 +24,9 @@ class HowCracked(commands.Cog):
             "Butt-Crack-ed",
             "Cement-Crack-ed",
         ]
+
         emojis = ["💯", "😎", "🔥", "🤯", "👀"]
+
         cool_ability_levels = [
             "Ultra Mega Super Charismatic",
             "Super Duper Strong",
@@ -53,7 +55,7 @@ class HowCracked(commands.Cog):
 
         # Build the embed
         embed = Embed(title=f"How Cracked is {target_user.name}?", color=0x00ff00)
-        embed.description = f"{target_user.mention} is {power_level}! {cracked_percentage:.2f}% {cool_ability_levels} {random.choice(emojis)}"
+        embed.description = f"{target_user.mention} is {power_level}! {cracked_percentage:.2f}% {ability_level} {random.choice(emojis)}"
         embed.set_footer(text="Powered by the Cracked-o-Meter and goku")
 
         # Send the embed
