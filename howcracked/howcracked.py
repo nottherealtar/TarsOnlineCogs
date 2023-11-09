@@ -25,6 +25,19 @@ class HowCracked(commands.Cog):
             "Cement-Crack-ed",
         ]
         emojis = ["💯", "😎", "🔥", "🤯", "👀"]
+        cool_ability_levels = [
+            "Ultra Mega Super Charismatic",
+            "Super Duper Strong",
+            "Mega Intelligent",
+            "Mildly Psychic",
+            "Slightly Telekinetic",
+            "Not So Nimble",
+            "Un-coordinated",
+            "Butt-Smooth Talker",
+            "Cement-Brained",
+            "Intellect",
+            "Rizz",
+        ]
 
         # Get the user to rate
         target_user = user or ctx.author
@@ -35,9 +48,12 @@ class HowCracked(commands.Cog):
         # Determine the cool power level
         power_level = random.choice(cool_power_levels)
 
+        # Ability percentage
+        ability_level = random.choice(cool_ability_levels)
+
         # Build the embed
         embed = Embed(title=f"How Cracked is {target_user.name}?", color=0x00ff00)
-        embed.description = f"{target_user.mention} is {power_level}! {cracked_percentage:.2f}% cracked {random.choice(emojis)}"
+        embed.description = f"{target_user.mention} is {power_level}! {cracked_percentage:.2f}% {cool_ability_levels} {random.choice(emojis)}"
         embed.set_footer(text="Powered by the Cracked-o-Meter and goku")
 
         # Send the embed
