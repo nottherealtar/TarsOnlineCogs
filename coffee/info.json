@@ -1,0 +1,16 @@
+{
+    "author": [
+        "nottherealtar"
+    ],
+    "install_msg": "`[p]help coffee`",
+    "name": "teachme",
+    "short": "Order a coffee",
+    "description": "Allows you to order yourself or someone you mention a coffee.",
+    "min_bot_version": "3.5.0",
+    "tags": [
+        "coffee",
+        "response",
+        "fun"
+    ],
+    "end_user_data_statement": "This cog does not persistently store any data or metadata about users."
+}
