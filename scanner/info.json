@@ -1,0 +1,16 @@
+{
+    "author": [
+        "nottherealtar"
+    ],
+    "install_msg": "`[p]scanner`",
+    "name": "scanner",
+    "short": "Uses altdentifier to do checks",
+    "description": "Makes use of the altcheck command to auto check new users on join.",
+    "min_bot_version": "3.5.0",
+    "tags": [
+        "util",
+        "admin",
+        "altcheck"
+    ],
+    "end_user_data_statement": "This cog does not persistently store any data or metadata about users."
+}
