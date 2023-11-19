@@ -20,11 +20,13 @@ This is a collection of cogs that I have made over time, some of them are just f
 
 > # Installation:
 1. Download the latest releases from [here](https://github.com/TheRealDuckMan/TarsOnlineCogs/)
-    By installing them via the downloader/cog-manager cog [p]repo add TarsOnlineCafe https://github.com/nottherealtar/TarsOnlineCogs, [p]cog install TarsOnlineCogs <cog>, [p]load <cog>
-2. After the cogs have loaded, make sure to [p]<cog> to see how they work and what they do!
+    By installing them via the downloader/cog-manager cog 
+    - `[p]repo add TarsOnlineCafe https://github.com/nottherealtar/TarsOnlineCogs`
+    - `[p]cog install TarsOnlineCogs <cog>`
+    - `[p]load <cog>`
+2. After the cogs have loaded, make sure to `[p]<cog>` to see how they work and what they do!
 
 ***
-
 
 > ## To-Do Cogs
 - `giveaway`~ `Givesaways are coming soon!`
