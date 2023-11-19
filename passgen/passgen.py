@@ -6,35 +6,44 @@
 # |_| \_|\___/ |_|   |_| |_| |_|_____|_| \_\_____/_/   \_\_____|_/_/   \_\_| \_\
 # 
 
+# Import statements 
+
 from redbot.core import commands
 import discord
 import random
 import string
 
-class PassGen(commands.Cog):
 
+class PassGen(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
     @commands.command()
     async def passgen(self, ctx):
         """Generates a random password"""
-        
-        view = PasswordLengthView()
-        await ctx.send("Choose password length:", view=view)
+
+        try:
+            view = PasswordLengthView(ctx)
+            await ctx.send("Choose password length:", view=view, delete_after=10)
+        except Exception as e:
+            await ctx.send(f"Error generating password: {e}")
+
 
 class PasswordLengthView(discord.ui.View):
+    def __init__(self, ctx):
+        super().__init__()
+        self.ctx = ctx
 
-    @discord.ui.button(label="8 Characters") 
-    async def eight_char(self, button, interaction):
-        password = generate_password(8)
-        await interaction.response.send_message(f"Here is your 8 character password: ``{password}``")
+    @discord.ui.button(label="Generate Password", style=discord.ButtonStyle.primary)
+    async def generate_password(self, button: discord.ui.Button, interaction: discord.Interaction):
+        length = random.randint(8, 16)  # Generate a random length between 8 and 16
+        password = self._generate_password(length)
+        try:
+            await interaction.user.send(f"Here is your {length} character password: `{password}`")
+        except Exception as e:
+            await interaction.response.send_message(f"Error sending DM: {e}", ephemeral=True)
 
-    @discord.ui.button(label="16 Characters")
-    async def sixteen_char(self, button, interaction):
-        password = generate_password(16)
-        await interaction.response.send_message(f"Here is your 16 character password: ``{password}``")
-
-def generate_password(length):
-    chars = string.ascii_letters + string.digits + "!@#$"
-    return ''.join(random.choice(chars) for i in range(length))
+    def _generate_password(self, length):
+        characters = string.ascii_letters + string.digits
+        password = ''.join(random.choice(characters) for _ in range(length))
+        return password
