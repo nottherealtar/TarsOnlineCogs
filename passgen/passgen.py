@@ -20,7 +20,7 @@ class Passgen(commands.Cog):
 
             # Button row with options for password length
             buttons = [
-                Button(style=ButtonStyle.blue, label=str(i), custom_id=f"passgen_length_{i}")
+                Button(style=discord.ButtonStyle.grey, label=str(i), custom_id=f"passgen_length_{i}")
                 for i in range(6, 33)
             ]
 
@@ -38,8 +38,8 @@ class Passgen(commands.Cog):
 
             # Button row with options for symbol types
             buttons = [
-                Button(style=ButtonStyle.green, label="Basic Symbols", custom_id="passgen_basic"),
-                Button(style=ButtonStyle.red, label="Advanced Symbols", custom_id="passgen_advanced"),
+                Button(style=discord.ButtonStyle.green, label="Basic Symbols", custom_id="passgen_basic"),
+                Button(style=discord.ButtonStyle.red, label="Advanced Symbols", custom_id="passgen_advanced"),
             ]
 
             # Send buttons
