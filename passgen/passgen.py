@@ -7,10 +7,10 @@
 # 
 
 # Import statements 
-from redbot.core import commands
 import discord
 import random
 import string
+from redbot.core import commands
 
 class PassGen(commands.Cog):
 
@@ -18,33 +18,16 @@ class PassGen(commands.Cog):
         self.bot = bot
 
     @commands.command()
-    async def passgen(self, ctx):
+    async def passgen(self, ctx, length: int = None):
         """Generates a random password of the specified length"""
 
-        def check(m):
-            return m.author == ctx.author and m.channel == ctx.channel
-
-        try:
-            await ctx.author.send("Please enter a password length between 6 and 32.")
-        except discord.Forbidden:
-            await ctx.send("I couldn't send you a DM. Please enter a password length between 6 and 32.")
+        if length is None:
+            await ctx.send("Please enter a password length between 6 and 32.")
             return
 
-        while True:
-            try:
-                msg = await self.bot.wait_for('message', check=check, timeout=30.0)
-            except asyncio.TimeoutError:
-                await ctx.send('Timeout reached, please run the command again.')
-                return
-
-            try:
-                length = int(msg.content)
-                if length < 6 or length > 32:
-                    await ctx.send("Invalid length. Please enter a password length between 6 and 32.")
-                    continue
-                break
-            except ValueError:
-                await ctx.send("Invalid input. Please enter a number.")
+        if length < 6 or length > 32:
+            await ctx.send("Invalid length. Please enter a password length between 6 and 32.")
+            return
 
         password = self._generate_password(length)
 
