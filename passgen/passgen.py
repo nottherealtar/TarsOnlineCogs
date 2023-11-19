@@ -2,7 +2,7 @@ import random
 import string
 from redbot.core import commands
 
-class Passgen(commands.Cog):
+class PassGen(commands.Cog):
 
     def __init__(self):
         super().__init__()
