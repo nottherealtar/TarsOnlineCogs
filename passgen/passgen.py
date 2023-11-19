@@ -1,7 +1,6 @@
 import string
 import random
 from redbot.core import commands
-from discord.ext import commands as ext_commands
 
 class Passgen(commands.Cog):
     def __init__(self, bot):
