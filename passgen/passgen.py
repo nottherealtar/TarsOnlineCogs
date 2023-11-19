@@ -1,9 +1,7 @@
-import discord
-from redbot.core import commands
-from discord.ext import commands as commands2
-from discord.ui import View, Button, ButtonStyle
 import string
 import random
+from redbot.core import commands
+from discord.ui import View, Button, ButtonStyle
 
 class Passgen(commands.Cog):
     def __init__(self, bot):
@@ -20,7 +18,7 @@ class Passgen(commands.Cog):
 
             # Button row with options for password length
             buttons = [
-                Button(style=discord.ButtonStyle.grey, label=str(i), custom_id=f"passgen_length_{i}")
+                Button(style=ButtonStyle.blue, label=str(i), custom_id=f"passgen_length_{i}")
                 for i in range(6, 33)
             ]
 
@@ -38,8 +36,8 @@ class Passgen(commands.Cog):
 
             # Button row with options for symbol types
             buttons = [
-                Button(style=discord.ButtonStyle.green, label="Basic Symbols", custom_id="passgen_basic"),
-                Button(style=discord.ButtonStyle.red, label="Advanced Symbols", custom_id="passgen_advanced"),
+                Button(style=ButtonStyle.green, label="Basic Symbols", custom_id="passgen_basic"),
+                Button(style=ButtonStyle.red, label="Advanced Symbols", custom_id="passgen_advanced"),
             ]
 
             # Send buttons
