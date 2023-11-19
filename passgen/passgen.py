@@ -38,5 +38,5 @@ class PassGen(commands.Cog):
             await ctx.send(f"I couldn't send you a DM. Here is your password: {password}")
 
     def _generate_password(self, length):
-        characters = string.ascii_letters + string.digits
+        characters = string.ascii_letters + string.digits + string.punctuation
         return ''.join(random.choice(characters) for i in range(length))
