@@ -4,7 +4,7 @@ This is a collection of cogs that I have made over time, some of them are just f
 
 
 > # Current Available Cogs
-- `assky`~ `Sends a random ascii emoji` ![Build status](https://img.shields.io/badge/build-passing-brightgreen.svg)
+- `assky`~ `Sends a random ascii emoji` ![COG Passing](https://img.shields.io/static/v1?label=COG&message=Passing&color=green)
 - `coffee`~ `Coffee bot brews you or a friend, a fresh cup of coffee!` ![Build status](https://img.shields.io/badge/build-passing-brightgreen.svg)
 - `howcracked`~ `ArE yOu EvEn CrAcKEd BrO?!` ![Build status](https://img.shields.io/badge/build-passing-brightgreen.svg)
 - `passgen`~ `Generates an 8 character password and sends via DM's` ![Build status](https://img.shields.io/badge/build-passing-brightgreen.svg)
