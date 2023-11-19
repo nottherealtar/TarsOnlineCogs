@@ -33,7 +33,7 @@ class PassGen(commands.Cog):
 
         try:
             await ctx.author.send(f"Here is your password: ``{password}``")
-            await ctx.send("I have sent you a DM with your password.")
+            await ctx.message.delete() # Deletes the original message with the command
         except discord.Forbidden:
             await ctx.send(f"I couldn't send you a DM. Here is your password: {password}")
 
