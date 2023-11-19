@@ -29,11 +29,11 @@ This is a collection of cogs that I have made over time, some of them are just f
 ***
 
 > ## To-Do Cogs
-- `giveaway`~ `Givesaways are coming soon!`
-- `meme`~ `Makes memes with images in chat`
-- `rolechecker`~ `Checks if roles exist and assigns them`
-- `serverinfo`~ `Shows server info in chat`
-- `githubstats`~ `Sends & displays all kinds of github info`
+- `giveaway`~ `Givesaways are coming soon!` ![Cog ToDo](https://img.shields.io/static/v1?label=Cog&message=ToDo&color=red)
+- `meme`~ `Makes memes with images in chat` ![Cog ToDo](https://img.shields.io/static/v1?label=Cog&message=ToDo&color=red)
+- `rolechecker`~ `Checks if roles exist and assigns them` ![Cog ToDo](https://img.shields.io/static/v1?label=Cog&message=ToDo&color=red)
+- `serverinfo`~ `Shows server info in chat` ![Cog ToDo](https://img.shields.io/static/v1?label=Cog&message=ToDo&color=red)
+- `githubstats`~ `Sends & displays all kinds of github info` ![Cog ToDo](https://img.shields.io/static/v1?label=Cog&message=ToDo&color=red)
 
 ***
 
