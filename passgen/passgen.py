@@ -22,7 +22,7 @@ class PassGen(commands.Cog):
         """Generates a random password of the specified length"""
 
         if length is None:
-            await ctx.send("Please enter a password length between 6 and 32.")
+            await ctx.send("Invalid length. Please enter a password length between 6 and 32.")
             return
 
         if length < 6 or length > 32:
