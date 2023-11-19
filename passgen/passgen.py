@@ -55,7 +55,6 @@ class Passgen(commands.Cog):
                 password_characters += string.punctuation
 
             generated_password = ''.join(random.choice(password_characters) for _ in range(password_length))
-
             # Send the generated password via direct message
             await ctx.author.send(f"Here is your generated password: `{generated_password}`")
 
