@@ -5,13 +5,13 @@ This is a collection of cogs that I have made over time, some of them are just f
 
 > # Current Available Cogs
 - `assky`~ `Sends a random ascii emoji` ![Cog Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen)
-- `coffee`~ `Coffee bot brews you or a friend, a fresh cup of coffee!` ![Build status](https://img.shields.io/badge/build-passing-brightgreen.svg)
-- `howcracked`~ `ArE yOu EvEn CrAcKEd BrO?!` ![Build status](https://img.shields.io/badge/build-passing-brightgreen.svg)
-- `passgen`~ `Generates an 8 character password and sends via DM's` ![Build status](https://img.shields.io/badge/build-passing-brightgreen.svg)
-- `projectpost`~ `Easy embeds, easy project posts` ![Build status](https://img.shields.io/badge/build-passing-brightgreen.svg)
-- `scanner`~ `Using AltDentifier, auto scan members` ![Build status](https://img.shields.io/badge/build-passing-brightgreen.svg)
-- `teachme`~ `Random Wise quotes sent on command` ![Build status](https://img.shields.io/badge/build-passing-brightgreen.svg)
-- `thankyou`~ `Thank you for the coffee, coffee-bot <3` ![Build status](https://img.shields.io/badge/build-passing-brightgreen.svg)
+- `coffee`~ `Coffee bot brews you or a friend, a fresh cup of coffee!` ![Cog Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen)
+- `howcracked`~ `ArE yOu EvEn CrAcKEd BrO?!` ![Cog Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen)
+- `passgen`~ `Generates an 8 character password and sends via DM's` ![Cog Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen)
+- `projectpost`~ `Easy embeds, easy project posts` ![Cog Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen)
+- `scanner`~ `Using AltDentifier, auto scan members` ![Cog Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen)
+- `teachme`~ `Random Wise quotes sent on command` ![Cog Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen)
+- `thankyou`~ `Thank you for the coffee, coffee-bot <3` ![Cog Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen)
 
 ***
 
