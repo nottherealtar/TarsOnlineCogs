@@ -13,8 +13,8 @@ import discord
 import random
 import string
 
-
 class PassGen(commands.Cog):
+
     def __init__(self, bot):
         self.bot = bot
 
@@ -30,29 +30,37 @@ class PassGen(commands.Cog):
 
 
 class PasswordLengthView(discord.ui.View):
+
     def __init__(self, ctx):
         super().__init__()
         self.ctx = ctx
 
     @discord.ui.button(label="8 Characters", style=discord.ButtonStyle.primary)
     async def generate_password_8(self, button: discord.ui.Button, interaction: discord.Interaction):
+
         length = 8
         password = self._generate_password(length)
+
+        ctx = await self.bot.get_context(interaction)
+        
         try:
-            await interaction.user.send(f"Here is your {length} character password: `{password}`")
+            await interaction.user.send(f"Here is your {length} character password: `{password}`") 
         except Exception as e:
-            await interaction.followup.send(f"Error sending DM: {e}", ephemeral=True)
+            await ctx.send(f"Error sending DM: {e}", ephemeral=True)
 
     @discord.ui.button(label="16 Characters", style=discord.ButtonStyle.primary)
     async def generate_password_16(self, button: discord.ui.Button, interaction: discord.Interaction):
+
         length = 16
         password = self._generate_password(length)
+
+        ctx = await self.bot.get_context(interaction)
+
         try:
             await interaction.user.send(f"Here is your {length} character password: `{password}`")
         except Exception as e:
-            await interaction.followup.send(f"Error sending DM: {e}", ephemeral=True)
+            await ctx.send(f"Error sending DM: {e}", ephemeral=True)
 
     def _generate_password(self, length):
         characters = string.ascii_letters + string.digits
-        password = ''.join(random.choice(characters) for _ in range(length))
-        return password
+        return ''.join(random.choice(characters) for i in range(length))
