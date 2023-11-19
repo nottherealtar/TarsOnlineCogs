@@ -34,14 +34,23 @@ class PasswordLengthView(discord.ui.View):
         super().__init__()
         self.ctx = ctx
 
-    @discord.ui.button(label="Generate Password", style=discord.ButtonStyle.primary)
-    async def generate_password(self, button: discord.ui.Button, interaction: discord.Interaction):
-        length = random.randint(8, 16)  # Generate a random length between 8 and 16
+    @discord.ui.button(label="8 Characters", style=discord.ButtonStyle.primary)
+    async def generate_password_8(self, button: discord.ui.Button, interaction: discord.Interaction):
+        length = 8
         password = self._generate_password(length)
         try:
             await interaction.user.send(f"Here is your {length} character password: `{password}`")
         except Exception as e:
-            await interaction.response.send_message(f"Error sending DM: {e}", ephemeral=True)
+            await interaction.followup.send(f"Error sending DM: {e}", ephemeral=True)
+
+    @discord.ui.button(label="16 Characters", style=discord.ButtonStyle.primary)
+    async def generate_password_16(self, button: discord.ui.Button, interaction: discord.Interaction):
+        length = 16
+        password = self._generate_password(length)
+        try:
+            await interaction.user.send(f"Here is your {length} character password: `{password}`")
+        except Exception as e:
+            await interaction.followup.send(f"Error sending DM: {e}", ephemeral=True)
 
     def _generate_password(self, length):
         characters = string.ascii_letters + string.digits
