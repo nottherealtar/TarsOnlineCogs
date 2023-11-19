@@ -3,8 +3,9 @@ import string
 from redbot.core import commands
 
 class PassGen(commands.Cog):
-
-    def __init__(self):
+    def __init__(self, bot):
+        self.bot = bot
+        
         super().__init__()
         self.cooldown = commands.CooldownMapping.from_cooldown(15, 17, commands.BucketType.user)
 
