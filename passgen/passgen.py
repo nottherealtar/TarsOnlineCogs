@@ -1,7 +1,7 @@
 import string
 import random
 from redbot.core import commands
-from discord.ui import View, Button, ButtonStyle
+from discord.ext import commands as ext_commands
 
 class Passgen(commands.Cog):
     def __init__(self, bot):
@@ -16,35 +16,49 @@ class Passgen(commands.Cog):
             # Ask for the user's desired password length
             await ctx.send("Please select the desired length for your password:")
 
-            # Button row with options for password length
+            # Create the buttons with options for password length
             buttons = [
                 Button(style=ButtonStyle.blue, label=str(i), custom_id=f"passgen_length_{i}")
                 for i in range(6, 33)
             ]
 
-            # Send buttons
-            message = await ctx.send("Choose password length:", components=buttons)
+            # Create a view to handle button interactions
+            view = PassgenView(timeout=60)
+
+            # Add the buttons to the view
+            for button in buttons:
+                view.add_item(button)
+
+            # Send the buttons and view
+            await ctx.send("Choose password length:", view=view)
 
             # Wait for user interaction
-            interaction = await self.bot.wait_for("button_click", check=lambda i: i.custom_id.startswith("passgen_length"), timeout=60)
+            interaction = await view.wait()
 
             # Get the selected length from the custom_id
             password_length = int(interaction.custom_id.split("_")[-1])
 
             # Ask for basic or advanced symbols
-            await interaction.respond(content=f"You selected a password length of {password_length}. Now, choose symbol options:")
+            await interaction.response.send_message(f"You selected a password length of {password_length}. Now, choose symbol options:")
 
-            # Button row with options for symbol types
+            # Create the buttons with options for symbol types
             buttons = [
                 Button(style=ButtonStyle.green, label="Basic Symbols", custom_id="passgen_basic"),
                 Button(style=ButtonStyle.red, label="Advanced Symbols", custom_id="passgen_advanced"),
             ]
 
-            # Send buttons
-            await interaction.edit_origin(content="Choose symbol options:", components=buttons)
+            # Create a new view to handle button interactions
+            view = PassgenView(timeout=60)
+
+            # Add the buttons to the view
+            for button in buttons:
+                view.add_item(button)
+
+            # Send the buttons and view
+            await interaction.response.edit_message(content="Choose symbol options:", view=view)
 
             # Wait for user interaction
-            interaction = await self.bot.wait_for("button_click", check=lambda i: i.custom_id.startswith("passgen"), timeout=60)
+            interaction = await view.wait()
 
             # Get the selected symbol type from the custom_id
             use_advanced_symbols = "advanced" in interaction.custom_id
@@ -55,12 +69,12 @@ class Passgen(commands.Cog):
                 password_characters += string.punctuation
 
             generated_password = ''.join(random.choice(password_characters) for _ in range(password_length))
+
             # Send the generated password via direct message
             await ctx.author.send(f"Here is your generated password: `{generated_password}`")
 
             # Clean up traces
-            await interaction.delete_original_message()
-            await message.delete()
+            await interaction.response.delete_message()
 
         except TimeoutError:
             await ctx.send("Time limit exceeded. Please run the command again.")
@@ -71,3 +85,19 @@ class Passgen(commands.Cog):
         except Exception as e:
             # Handle other errors
             await ctx.send(f"An error occurred: {str(e)}")
+
+class PassgenView(ext_commands.View):
+    def __init__(self, *, timeout=180):
+        super().__Init__(timeout=timeout) # Initializing view with timeout
+
+    async def on_timeout(self):
+        for item in self.children:
+            item.disabled = True # Disable buttons on timeout
+
+        await self.response.edit(content="Timeout reached. Please run the command again.", view=self) # Edit message on timeout
+
+    async def on_error(self, error, item, interaction):
+        for item in self.children:
+            item.disabled = True # Disable buttons on error
+
+        await self.response.edit(content=f"An error occurred: {str(error)}", view=self) # Edit message on error
