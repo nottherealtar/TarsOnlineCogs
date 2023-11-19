@@ -9,21 +9,38 @@
 import random
 import string
 from redbot.core import commands
+import discord
+
 
 class PassGen(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-        super().__init__()
-        self.cooldown = commands.CooldownMapping.from_cooldown(15, 17, commands.BucketType.user)
+view = discord.ui.View()
+chars = ("!@#")
 
-    @commands.command()
-    @commands.cooldown(1, 15, commands.BucketType.user)
-    async def passgen(self, ctx):
-        password = self.generate_password()
-        await ctx.author.send(f"Here is your password: ``{password}``")
-        await ctx.message.delete()
+@commands.command()
+async def passgen(self, ctx):
 
-    def generate_password(self):
-        chars = string.ascii_letters + string.digits + "!@#$%^&*"
-        return ''.join(random.choice(chars) for i in range(8))
+    async def eight_char(interaction):
+        password = self.generate_password(8)
+        await interaction.response.send_message(f"Here is your 8 character password: ``{password}``")
+
+    async def sixteen_char(interaction):
+        password = self.generate_password(16) 
+        await interaction.response.send_message(f"Here is your 16 character password: ``{password}``")
+
+    eight_button = discord.ui.Button(label="8 Characters", row=1)
+    eight_button.callback = eight_char
+
+    sixteen_button = discord.ui.Button(label="16 Characters", row=1)
+    sixteen_button.callback = sixteen_char
+
+    view.add_item(eight_button)
+    view.add_item(sixteen_button)
+
+    await ctx.send("Choose password length:", view=view)
+
+def generate_password(self, length):
+    # Existing password generation code
+    return ''.join(random.choice(chars) for i in range(length)) 
