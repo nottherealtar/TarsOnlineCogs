@@ -6,7 +6,7 @@ import random
 import string
 from discord import ext_command
 
-class Passgen(commands.Cog):
+class PassGen(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
