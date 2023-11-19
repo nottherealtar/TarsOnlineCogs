@@ -1,13 +1,13 @@
-import string
-import random
+import discord
 from redbot.core import commands
-from discord import Embed, ButtonStyle
+from discord.ext import commands as commands2
+from discord.ui import View, Button, ButtonStyle
 
 class Passgen(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command
+    @commands.command()
     async def passgen(self, ctx):
         """
         Generates a random password based on user input.
@@ -23,7 +23,7 @@ class Passgen(commands.Cog):
             ]
 
             # Send buttons
-            message = await ctx.send(components=[buttons])
+            message = await ctx.send("Choose password length:", components=buttons)
 
             # Wait for user interaction
             interaction = await self.bot.wait_for("button_click", check=lambda i: i.custom_id.startswith("passgen_length"), timeout=60)
@@ -41,7 +41,7 @@ class Passgen(commands.Cog):
             ]
 
             # Send buttons
-            await interaction.edit_origin(components=[buttons])
+            await interaction.edit_origin(content="Choose symbol options:", components=buttons)
 
             # Wait for user interaction
             interaction = await self.bot.wait_for("button_click", check=lambda i: i.custom_id.startswith("passgen"), timeout=60)
