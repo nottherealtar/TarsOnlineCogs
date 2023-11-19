@@ -1,9 +1,9 @@
-# >TarsOnlineCogs
+> # TarsOnlineCogs
 Welcome to my repo of weird and wacky ducktaped together cogs for Red V3 structured Cogs.
 This is a collection of cogs that I have made over time, some of them are just fun little projects or things I've found.
 
 
-# Current Available Cogs
+> # Current Available Cogs
 - `assky`~ `Sends a random ascii emoji` ![Build status](https://img.shields.io/badge/build-passing-brightgreen.svg)
 - `coffee`~ `Coffee bot brews you or a friend, a fresh cup of coffee!` ![Build status](https://img.shields.io/badge/build-passing-brightgreen.svg)
 - `howcracked`~ `ArE yOu EvEn CrAcKEd BrO?!` ![Build status](https://img.shields.io/badge/build-passing-brightgreen.svg)
@@ -16,9 +16,9 @@ This is a collection of cogs that I have made over time, some of them are just f
 ***
 
 
-## >Open Source and available to the public, please credit where due.
+> ## Open Source and available to the public, please credit where due.
 
-# >Installation:
+> # Installation:
 1. Download the latest releases from [here](https://github.com/TheRealDuckMan/TarsOnlineCogs/)
     By installing them via the downloader/cog-manager cog [p]repo add TarsOnlineCafe https://github.com/nottherealtar/TarsOnlineCogs, [p]cog install TarsOnlineCogs <cog>, [p]load <cog>
 2. After the cogs have loaded, make sure to [p]<cog> to see how they work and what they do!
@@ -26,7 +26,7 @@ This is a collection of cogs that I have made over time, some of them are just f
 ***
 
 
-## To-Do Cogs
+> ## To-Do Cogs
 - `giveaway`~ `Givesaways are coming soon!`
 - `meme`~ `Makes memes with images in chat`
 - `rolechecker`~ `Checks if roles exist and assigns them`
@@ -37,7 +37,8 @@ This is a collection of cogs that I have made over time, some of them are just f
 
 
 
-## Cool Useless Tree Directory
+> ## Cool Useless Tree Directory
+```
 .
 ├── assky
 │   ├── __init__.py
@@ -71,7 +72,7 @@ This is a collection of cogs that I have made over time, some of them are just f
     ├── __init__.py
     ├── info.json
     └── thankyou.py
-
+```
 
 [![Views](http://hits.dwyl.com/nottherealtar/TarsOnlineCogs.svg)](http://hits.dwyl.com/nottherealtar/TarsOnlineCogs)
 
