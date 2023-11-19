@@ -32,7 +32,8 @@ class PassGen(commands.Cog):
         password = self._generate_password(length)
 
         try:
-            await ctx.author.send(f"Here is your password: ``{password}``")
+            embed = discord.Embed(title="Your password:", description=f"`{password}`", color=random.randint(0, 0xFFFFFF))
+            await ctx.author.send(embed=embed)
             await ctx.message.delete() # Deletes the original message with the command
         except discord.Forbidden:
             await ctx.send(f"I couldn't send you a DM. Here is your password: {password}")
