@@ -2,7 +2,6 @@ import string
 import random
 from redbot.core import commands
 from discord import Embed, ButtonStyle
-from discord_components import Button
 
 class Passgen(commands.Cog):
     def __init__(self, bot):
