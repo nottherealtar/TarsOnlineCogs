@@ -4,7 +4,6 @@ import discord
 from redbot.core import commands
 import random
 import string
-from discord import ext_command
 
 class PassGen(commands.Cog):
 
