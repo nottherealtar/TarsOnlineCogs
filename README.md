@@ -2,6 +2,8 @@
 Welcome to my repo of weird and wacky ducktaped together cogs for Red V3 structured Cogs.
 This is a collection of cogs that I have made over time, some of them are just fun little projects or things I've found.
 
+> The Dev server: [Join here](https://discord.gg/CsR9zECCQt)
+
 
 > # Current Available Cogs
 - `assky`~ `Sends a random ascii emoji` ![Cog Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen)
