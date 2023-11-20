@@ -1,0 +1,16 @@
+{
+    "author": [
+        "nottherealtar"
+    ],
+    "install_msg": "`[p]help coffeestatus`",
+    "name": "coffeestatus",
+    "short": "RPS for the bot.",
+    "description": "Useful RPC for your discord bot. Shows helpful metrics to display in status.",
+    "min_bot_version": "3.5.0",
+    "tags": [
+        "util",
+        "status",
+        "RPC"
+    ],
+    "end_user_data_statement": "This cog does not persistently store any data or metadata about users."
+}
