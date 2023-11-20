@@ -3,7 +3,7 @@ from redbot.core import Config, commands, checks
 import asyncio
 import logging
 
-log = logging.getLogger("red.tarsonlinecogs.coffeestatus")
+log = logging.getLogger("red.nottherealtar.coffeestatus")
 
 
 class CoffeeStatus(commands.Cog):
@@ -34,24 +34,25 @@ class CoffeeStatus(commands.Cog):
     @commands.group(autohelp=True)
     @commands.guild_only()
     @checks.is_owner()
-    async def rndstatus(self, ctx):
+    async def coffeestatus(self, ctx):
+        """group commands."""
         pass
 
-    @rndstatus.command(name="activities")
+    @coffeestatus.command(name="activities")
     async def _activities(self, ctx, *activities: str):
         """Sets custom activities for the bot."""
         if activities == ():
             saved_activities = await self.config.activities()
             msg = (
                 f"Current custom activities: {(', ').join(saved_activities)}\n"
-                f"To set new activities, use the instructions in `{ctx.prefix}help rndstatus activities`."
+                f"To set new activities, use the instructions in `{ctx.prefix}help coffeestatus activities`."
             )
             return await ctx.send(msg)
         await self.config.activities.set(list(activities))
         await self.presence_updater()
         await ctx.send("Done. Redo this command with no parameters to see the current list of activities.")
 
-    @rndstatus.command(name="streamer")
+    @coffeestatus.command(name="streamer")
     async def _streamer(self, ctx: commands.Context, *, streamer=None):
         """Set the streamer name needed for streaming statuses."""
         saved_streamer = await self.config.streamer()
@@ -60,7 +61,7 @@ class CoffeeStatus(commands.Cog):
         await self.config.streamer.set(streamer)
         await ctx.send("Done. Redo this command with no parameters to see the current streamer.")
 
-    @rndstatus.command()
+    @coffeestatus.command()
     async def botstats(self, ctx):
         """Toggle for a bot stats status instead of random messages."""
         botstats = await self.config.botstats()
@@ -68,9 +69,9 @@ class CoffeeStatus(commands.Cog):
         await ctx.send(f"Botstats toggle: {not botstats}.")
         await self.presence_updater()
 
-    @rndstatus.command(name="type")
-    async def _rndstatus_type(self, ctx, status_type: int):
-        """Define the rndstatus game type.
+    @coffeestatus.command(name="type")
+    async def _coffeestatus_type(self, ctx, status_type: int):
+        """Define the coffeestatus game type.
 
         Type list:
         0 = Playing
@@ -89,7 +90,7 @@ class CoffeeStatus(commands.Cog):
                 f"See `{ctx.prefix}help rndstatus type` for more information."
             )
 
-    @rndstatus.command()
+    @coffeestatus.command()
     async def status(self, ctx, status: int):
         """Define the rndstatus presence status.
 
@@ -146,7 +147,7 @@ class CoffeeStatus(commands.Cog):
             me = self.bot.user
             total_users = len(self.bot.users)
             servers = str(len(self.bot.guilds))
-            botstatus = f"Prefix: {ctx.prefix} | Users: {total_users} | Servers: {servers}"
+            botstatus = f"☕Prefix: cchelp | Users: {total_users} | Servers: {servers}🌵"
             if _type == 1:
                 await self.bot.change_presence(activity=discord.Streaming(name=botstatus, url=url))
             else:
