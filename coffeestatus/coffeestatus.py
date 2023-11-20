@@ -3,10 +3,10 @@ from redbot.core import Config, commands, checks
 import asyncio
 import logging
 
-log = logging.getLogger("red.aikaterna.rndstatus")
+log = logging.getLogger("red.tarsonlinecogs.coffeestatus")
 
 
-class RndStatus(commands.Cog):
+class CoffeeStatus(commands.Cog):
     """Displays bot stats or sets a specific activity status."""
 
     async def red_delete_data_for_user(self, **kwargs):
@@ -35,7 +35,6 @@ class RndStatus(commands.Cog):
     @commands.guild_only()
     @checks.is_owner()
     async def rndstatus(self, ctx):
-        """Rndstatus group commands."""
         pass
 
     @rndstatus.command(name="activities")
