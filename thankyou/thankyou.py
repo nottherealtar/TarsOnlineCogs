@@ -25,6 +25,7 @@ class ThankYou(commands.Cog):
         # Create the thank you embed
         embed = Embed(title="Thank You!", description=f"Thank you, {user.mention}, for the coffee! ☕", color=0xFFD700)  # Use a suitable color for a coffee theme
         embed.set_image(url=thank_you_image)
+        embed.set_footer(text="Enjoy your coffee from Tars Online Cafe!")
 
         # Send the embed to the specified user
         await ctx.send(embed=embed)
