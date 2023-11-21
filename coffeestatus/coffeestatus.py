@@ -162,12 +162,3 @@ class CoffeeStatus(commands.Cog):
                     await self.bot.change_presence(
                         activity=discord.Activity(name=new_activity, type=_type), status=status
                     )
-
-    def random_activity(self, activities):
-        return activities[0]  # You can customize the logic for selecting a random activity here
-
-
-# Assuming ctx is available when needed
-# ctx = YourContextObject()
-# rndstatus_cog = RndStatus(ctx.bot)
-# ctx.bot.add_cog(rndstatus_cog)
