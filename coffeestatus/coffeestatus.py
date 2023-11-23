@@ -147,7 +147,7 @@ class CoffeeStatus(commands.Cog):
             me = self.bot.user
             total_users = len(self.bot.users)
             servers = str(len(self.bot.guilds))
-            botstatus = f"☕Prefix: cchelp | Users: {total_users} | Servers: {servers}🌵"
+            botstatus = f"☕cchelp | 🧑 {total_users} | 🌐 {servers}🌵"
             if _type == 1:
                 await self.bot.change_presence(activity=discord.Streaming(name=botstatus, url=url))
             else:
