@@ -1,0 +1,2 @@
+pixelscr.ttf is assumed to be free for public use.
+Originally included in Altsys' Fontographer 3.5 from 1992. During Macromedia's acquisition by Adobe Systems in 2005, Macromedia sold Fontographer's rights and code to FontLab Ltd. pixelscr.ttf is not distributed with current FontLab installs.
