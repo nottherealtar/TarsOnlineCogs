@@ -1,0 +1,13 @@
+{
+    "author": ["Nemika-Haj", "aikaterna", "nottherealtar"],
+    "install_msg": "Use `[p]help CafeWelcome` after loading the cog to find configuration options.",
+    "name": "cafewelcome",
+    "short": "Welcomes users with the BytesToBits' image generation.",
+    "description": "Generates ASCII-themed welcome gifs.",
+    "min_bot_version": "3.5.0",
+    "tags": [
+        "ascii",
+        "text",
+        "welcome"
+    ],
+}
