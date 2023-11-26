@@ -9,6 +9,7 @@ This is a collection of cogs that I have made over time, some of them are just f
 
 > Dev server: [Join here](https://discord.gg/CsR9zECCQt)
 
+</div>
 
 > # Current Available Cogs
 - `assky`~ `Sends a random ascii emoji` ![Cog Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen)
@@ -22,7 +23,7 @@ This is a collection of cogs that I have made over time, some of them are just f
 - `thankyou`~ `Thank you for the coffee, coffee-bot <3` ![Cog Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen)
 
 ***
-
+<div align="center">
 
 > ## Open Source and available to the public, please credit where due.
 
@@ -32,7 +33,7 @@ This is a collection of cogs that I have made over time, some of them are just f
     - `[p]repo add TarsOnlineCafe https://github.com/nottherealtar/TarsOnlineCogs`
     - `[p]cog install TarsOnlineCogs <cog>`
     - `[p]load <cog>`
-
+</div>
 ***
 
 > ## To-Do Cogs
@@ -106,5 +107,3 @@ This is a collection of cogs that I have made over time, some of them are just f
    ├─ info.json
    └─ thankyou.py
 ```
-
-</div>
