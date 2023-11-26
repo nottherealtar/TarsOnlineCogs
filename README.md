@@ -4,10 +4,10 @@ v3 Cogs for Red-DiscordBot by nottherealtar
 [![Views](http://hits.dwyl.com/nottherealtar/TarsOnlineCogs.svg)](http://hits.dwyl.com/nottherealtar/TarsOnlineCogs)
 
 > # TarsOnlineCogs
-Welcome to my repo of weird and wacky ducktaped together cogs for Red V3 structured Cogs.
+Welcome to my repo of weird and wacky ducktaped together cogs for Red-DiscordBot.
 This is a collection of cogs that I have made over time, some of them are just fun little projects or things I've found.
 
-> The Dev server: [Join here](https://discord.gg/CsR9zECCQt)
+> Dev server: [Join here](https://discord.gg/CsR9zECCQt)
 
 
 > # Current Available Cogs
@@ -32,7 +32,6 @@ This is a collection of cogs that I have made over time, some of them are just f
     - `[p]repo add TarsOnlineCafe https://github.com/nottherealtar/TarsOnlineCogs`
     - `[p]cog install TarsOnlineCogs <cog>`
     - `[p]load <cog>`
-2. After the cogs have loaded, make sure to `[p]<cog>` to see how they work and what they do!
 
 ***
 
@@ -44,8 +43,6 @@ This is a collection of cogs that I have made over time, some of them are just f
 - `githubstats`~ `Sends & displays all kinds of github info` ![Cog ToDo](https://img.shields.io/static/v1?label=Cog&message=ToDo&color=red)
 
 ***
-
-
 
 > ## Cool Useless Tree Directory
 ```
