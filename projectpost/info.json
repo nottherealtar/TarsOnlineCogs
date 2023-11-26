@@ -2,15 +2,15 @@
     "author": [
         "nottherealtar"
     ],
-    "install_msg": "`[p]passgen`",
-    "name": "passgen",
-    "short": "Gens a password",
-    "description": "Generates a password according to user input.",
+    "install_msg": "`[p]projectpost`",
+    "name": "projectpost",
+    "short": "Easy Basic Embeds",
+    "description": "Allows the user to generate very easy and very basic embeds for github projects etc.",
     "min_bot_version": "3.5.0",
     "tags": [
         "util",
-        "admin",
-        "password"
+        "post",
+        "embed"
     ],
     "end_user_data_statement": "This cog does not persistently store any data or metadata about users.",
     "type": "COG"
