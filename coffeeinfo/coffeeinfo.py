@@ -44,13 +44,13 @@ class CoffeeInfo(commands.Cog):
         """Remove the server stats display from the voice channels."""
         try:
             guild = ctx.guild
-            category = discord.utils.get(guild.categories, name='Server Stats')
+            category = discord.utils.get(guild.categories, name='☕Server Stats☕')
             if category:
                 for channel in category.voice_channels:
                     await channel.delete()
                 await category.delete()
             else:
-                await ctx.send("Could not find the 'Server Stats' category. Has the setup been done before?")
+                await ctx.send("Could not find the '☕Server Stats☕' category. Has the setup been done before?")
 
             await ctx.send("Server stats display has been reverted from the voice channels.")
         except Exception as e:
