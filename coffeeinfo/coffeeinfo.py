@@ -47,7 +47,6 @@ class CoffeeInfo(commands.Cog):
         category.create_voice_channel("Server Boosts", overwrites=overwrites)
 
     # Commands
-
     @commands.group(invoke_without_command=True)
     @commands.guild_only()
     async def coffeeinfo(self, ctx):
@@ -64,6 +63,13 @@ class CoffeeInfo(commands.Cog):
             category = await guild.create_category("☕CoffeeInfo☕")
             await self.config.guild(guild).category_id.set(category.id)
             self.create_stat_channels(category)
+            overwrites = {
+        category.guild.default_role: discord.PermissionOverwrite(connect=False)  # Prevents users from connecting
+    }
+            category.create_voice_channel("Humans", overwrites=overwrites)
+            category.create_voice_channel("Bots", overwrites=overwrites)
+            category.create_voice_channel("Server Boosts", overwrites=overwrites)
+            
             await ctx.send("CoffeeInfo category and channels have been set up.")
         else:
             await ctx.send("CoffeeInfo category and channels already exist.")
@@ -101,4 +107,5 @@ Setup commands:
 Management commands:  
 `[p]coffeeinfo help`: Displays this help message
         """
+
         await ctx.send(help_text)
