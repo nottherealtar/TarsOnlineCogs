@@ -8,19 +8,23 @@ class CoffeeInfo(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=12934891293)
+        self.config.register_guild(category_id=None)
         self.update_stats.start()
 
     @tasks.loop(minutes=1)
     async def update_stats(self):
         try:
             guild = self.bot.get_guild(await self.config.guild_id())
-            category = self.get_category(guild)
-            self.update_channels(category, guild)
+            category_id = await self.config.guild(guild).category_id()
+            
+            if category_id is not None:
+                category = guild.get_channel(category_id)
+                if category is None:
+                    category = await guild.create_category("☕CoffeeInfo☕")
+                    await self.config.guild(guild).category_id.set(category.id)
+                self.update_channels(category, guild)
         except Exception as error:
             print(f"Error updating stats: {error}")
-
-    def get_category(self, guild):
-        return discord.utils.get(guild.categories, name="☕CoffeeInfo☕") or guild.create_category("☕CoffeeInfo☕")
 
     def update_channels(self, category, guild):
         channels = category.channels
@@ -32,7 +36,7 @@ class CoffeeInfo(commands.Cog):
             if c.name.startswith("Humans"):
                 c.name = f"Humans: {len(guild.members)}"
             elif c.name.startswith("Bots"):
-                c.name = f"Bots: {len(guild.bots)}" 
+                c.name = f"Bots: {len([member for member in guild.members if member.bot])}"
             elif c.name.startswith("Server Boosts"):
                 c.name = f"Server Boosts: {guild.premium_subscription_count}"
 
@@ -55,10 +59,10 @@ class CoffeeInfo(commands.Cog):
     async def setup(self, ctx):
         """Sets up the CoffeeInfo category and channels"""
         guild = ctx.guild
-        category = self.get_category(guild)
-        # Check if category and channels already exist
-        if category is None:
+        category_id = await self.config.guild(guild).category_id()
+        if category_id is None:
             category = await guild.create_category("☕CoffeeInfo☕")
+            await self.config.guild(guild).category_id.set(category.id)
             self.create_stat_channels(category)
             await ctx.send("CoffeeInfo category and channels have been set up.")
         else:
@@ -68,12 +72,15 @@ class CoffeeInfo(commands.Cog):
     @has_permissions(administrator=True)
     async def revert(self, ctx):
         """Removes the CoffeeInfo category and channels"""
-        category = discord.utils.get(ctx.guild.categories, name="☕CoffeeInfo☕")
-        if category:
-            for channel in category.channels:
-                await channel.delete()
-            await category.delete()
-            await ctx.send("CoffeeInfo category and channels have been reverted.")
+        category_id = await self.config.guild(ctx.guild).category_id()
+        if category_id is not None:
+            category = ctx.guild.get_channel(category_id)
+            if category:
+                for channel in category.channels:
+                    await channel.delete()
+                await category.delete()
+                await self.config.guild(ctx.guild).category_id.clear()
+                await ctx.send("CoffeeInfo category and channels have been reverted.")
         else:
             await ctx.send("CoffeeInfo category and channels not found.")
 
