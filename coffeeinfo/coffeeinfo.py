@@ -26,6 +26,8 @@ class CoffeeInfo(commands.Cog):
         except Exception as error:
             print(f"Error updating stats: {error}")
 
+        channels = category.channels
+
     def update_channels(self, category, guild):
         channels = category.channels
         
@@ -53,6 +55,8 @@ class CoffeeInfo(commands.Cog):
         """Manages the CoffeeInfo category and channels"""
         pass
     
+        
+
     @coffeeinfo.command()
     @has_permissions(administrator=True)
     async def setup(self, ctx):
@@ -62,14 +66,20 @@ class CoffeeInfo(commands.Cog):
         if category_id is None:
             category = await guild.create_category("☕CoffeeInfo☕")
             await self.config.guild(guild).category_id.set(category.id)
-            self.create_stat_channels(category)
-            overwrites = {
-        category.guild.default_role: discord.PermissionOverwrite(connect=False)  # Prevents users from connecting
-    }
-            await category.create_voice_channel("Humans", overwrites=overwrites)
-            await category.create_voice_channel("Bots", overwrites=overwrites)
-            await category.create_voice_channel("Server Boosts", overwrites=overwrites)
-            
+            def update_channels(self, category, guild):
+    
+    
+    if len(channels) < 3:
+        self.create_stat_channels(category)
+        
+    for c in channels:
+        if c.name.startswith("Humans"):
+            c.name = f"Humans: {len([member for member in guild.members if not member.bot])}"
+        elif c.name.startswith("Bots"):
+            c.name = f"Bots: {len([member for member in guild.members if member.bot])}"
+        elif c.name.startswith("Server Boosts"):
+            c.name = f"Server Boosts: {guild.premium_subscription_count}"
+
             await ctx.send("CoffeeInfo category and channels have been set up.")
         else:
             await ctx.send("CoffeeInfo category and channels already exist.")
