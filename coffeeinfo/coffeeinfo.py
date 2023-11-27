@@ -1,10 +1,11 @@
 from redbot.core import commands
 from redbot.core import checks
 from redbot.core.utils.menus import menu, DEFAULT_CONTROLS
+import discord
 
 class CoffeeInfo(commands.Cog):
     """Cog to display server stats in an automatically updating voice channel style."""
-    
+   
     def __init__(self, bot):
         self.bot = bot
 
@@ -20,11 +21,13 @@ class CoffeeInfo(commands.Cog):
         """Set up the voice channel to display server stats (total humans, bots, and server boosts)."""
         try:
             guild = ctx.guild
-            voice_channels = [await guild.create_voice_channel(f'Humans: {guild.member_count}'),
-                               await guild.create_voice_channel(f'Bots: {sum(member.bot for member in guild.members)}'),
-                               await guild.create_voice_channel(f'Server Boosts: {guild.premium_subscription_count}')]
+            category = await guild.create_category(name='Server Stats')
 
-            await ctx.send("Server stats have been set up in the voice channels.")
+            voice_channels = [await guild.create_voice_channel(f'Humans: {guild.member_count}', category=category),
+                               await guild.create_voice_channel(f'Bots: {sum(member.bot for member in guild.members)}', category=category),
+                               await guild.create_voice_channel(f'Server Boosts: {guild.premium_subscription_count}', category=category)]
+
+            await ctx.send("Server stats have been set up in the voice channels under the 'Server Stats' category.")
         except Exception as e:
             await ctx.send(f"An error occurred during setup: {e}")
 
@@ -33,9 +36,13 @@ class CoffeeInfo(commands.Cog):
         """Remove the server stats display from the voice channels."""
         try:
             guild = ctx.guild
-            for channel in guild.voice_channels:
-                if channel.name.startswith(('Humans:', 'Bots:', 'Server Boosts:')):
+            category = discord.utils.get(guild.categories, name='Server Stats')
+            if category:
+                for channel in category.voice_channels:
                     await channel.delete()
+                await category.delete()
+            else:
+                await ctx.send("Could not find the 'Server Stats' category. Has the setup been done before?")
 
             await ctx.send("Server stats display has been reverted from the voice channels.")
         except Exception as e:
