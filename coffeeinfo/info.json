@@ -1,0 +1,17 @@
+{
+    "author": [
+        "nottherealtar"
+    ],
+    "install_msg": "`see [p]coffeeinfo for more info`",
+    "name": "coffeeinfo",
+    "short": "Server Stats",
+    "description": "Generates Server stats for your guild in both text and channel format.",
+    "min_bot_version": "3.5.0",
+    "tags": [
+        "util",
+        "server",
+        "stats"
+    ],
+    "end_user_data_statement": "This cog does not persistently store any data or metadata about users.",
+    "type": "COG"
+}
