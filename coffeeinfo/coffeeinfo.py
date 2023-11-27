@@ -29,7 +29,7 @@ class CoffeeInfo(commands.Cog):
         """Set up the voice channel to display server stats (total humans, bots, and server boosts)."""
         try:
             guild = ctx.guild
-            category = await guild.create_category(name='Server Stats')
+            category = await guild.create_category(name='☕Server Stats☕')
 
             voice_channels = [await guild.create_voice_channel(f'Humans: {guild.member_count}', category=category),
                                await guild.create_voice_channel(f'Bots: {sum(member.bot for member in guild.members)}', category=category),
