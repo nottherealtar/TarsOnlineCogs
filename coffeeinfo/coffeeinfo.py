@@ -66,9 +66,9 @@ class CoffeeInfo(commands.Cog):
             overwrites = {
         category.guild.default_role: discord.PermissionOverwrite(connect=False)  # Prevents users from connecting
     }
-            category.create_voice_channel("Humans", overwrites=overwrites)
-            category.create_voice_channel("Bots", overwrites=overwrites)
-            category.create_voice_channel("Server Boosts", overwrites=overwrites)
+            await category.create_voice_channel("Humans", overwrites=overwrites)
+            await category.create_voice_channel("Bots", overwrites=overwrites)
+            await category.create_voice_channel("Server Boosts", overwrites=overwrites)
             
             await ctx.send("CoffeeInfo category and channels have been set up.")
         else:
