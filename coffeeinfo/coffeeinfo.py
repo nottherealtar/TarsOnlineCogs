@@ -1,13 +1,6 @@
-#
-#  _   _  ___ _____ _____ _   _ _____ ____  _____    _    _   _____  _    ____  
-# | \ | |/ _ \_   _|_   _| | | | ____|  _ \| ____|  / \  | | |_   _|/ \  |  _ \ 
-# |  \| | | | || |   | | | |_| |  _| | |_) |  _|   / _ \ | |   | | / _ \ | |_) |
-# | |\  | |_| || |   | | |  _  | |___|  _ <| |___ / ___ \| |___| |/ ___ \|  _ < 
-# |_| \_|\___/ |_|   |_| |_| |_|_____|_| \_\_____/_/   \_\_____|_/_/   \_\_| \_\
-# 
 
 """
-coffeeinfo.py v2
+coffeeinfo.py v3
 A cog to display live server statistics in Discord voice channels.  
 
 Changes:
@@ -26,8 +19,9 @@ Requires the administrator permission to setup.
 """
 
 import discord
-from redbot.core import commands, Config, tasks
+from redbot.core import commands, Config
 from discord.ext.commands import has_permissions
+from discord.ext import tasks
 
 class CoffeeInfo(commands.Cog):
 
@@ -88,4 +82,4 @@ Setup commands:
 Management commands:  
 `[p]coffeeinfo revert`: Removes the CoffeeInfo category and channels
         """
-        await ctx.send(help_text)
+        await ctx.send(help_text) 
