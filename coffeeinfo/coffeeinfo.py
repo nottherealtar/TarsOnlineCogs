@@ -22,7 +22,7 @@ class CoffeeInfo(commands.Cog):
     async def coffeeinfo(self, ctx):
         """Set up server stats in a voice channel to display human, bot, and server boost totals."""
         if ctx.invoked_subcommand is None:
-            await ctx.send_help()
+            pass
 
     @coffeeinfo.command()
     async def setup(self, ctx):
