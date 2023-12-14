@@ -41,7 +41,7 @@ class CoffeeInfo(commands.Cog):
 
     @coffeeinfo.command()
     async def revert(self, ctx):
-        """Remove the server stats display from the voice channels."""
+        """Remove the server stats display from the server."""
         try:
             guild = ctx.guild
             category = discord.utils.get(guild.categories, name='☕Server Stats☕')
