@@ -1,5 +1,5 @@
 import discord
-from discord.ext import commands, tasks
+from redbot.core import commands, tasks
 import aiohttp
 
 class GitHubCommits(commands.Cog):

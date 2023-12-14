@@ -10,12 +10,14 @@ from redbot.core import commands
 from redbot.core import checks
 from redbot.core.utils.menus import menu, DEFAULT_CONTROLS
 import discord
+from discord.ext import tasks
 
 class CoffeeInfo(commands.Cog):
     """Cog to display server stats in an automatically updating voice channel style."""
-   
+
     def __init__(self, bot):
         self.bot = bot
+        self.check_for_updates.start()
 
     @commands.group()
     @checks.admin()
@@ -55,3 +57,36 @@ class CoffeeInfo(commands.Cog):
             await ctx.send("Server stats display has been reverted from the voice channels.")
         except Exception as e:
             await ctx.send(f"An error occurred during revert: {e}")
+
+    @coffeeinfo.command()
+    async def update(self, ctx):
+        """Manually update the counts of human, bot, and server boost totals."""
+        try:
+            guild = ctx.guild
+            category = discord.utils.get(guild.categories, name='☕Server Stats☕')
+            if category:
+                for channel in category.voice_channels:
+                    if channel.name.startswith('Humans:'):
+                        await channel.edit(name=f'Humans: {guild.member_count}')
+                    elif channel.name.startswith('Bots:'):
+                        await channel.edit(name=f'Bots: {sum(member.bot for member in guild.members)}')
+                    elif channel.name.startswith('Server Boosts:'):
+                        await channel.edit(name=f'Server Boosts: {guild.premium_subscription_count}')
+                await ctx.send("Server stats have been manually updated.")
+            else:
+                await ctx.send("Could not find the '☕Server Stats☕' category. Has the setup been done before?")
+        except Exception as e:
+            await ctx.send(f"An error occurred during update: {e}")
+
+    @tasks.loop(seconds=900)
+    async def check_for_updates(self):
+        for guild in self.bot.guilds:
+            category = discord.utils.get(guild.categories, name='☕Server Stats☕')
+            if category:
+                for channel in category.voice_channels:
+                    if channel.name.startswith('Humans:'):
+                        await channel.edit(name=f'Humans: {guild.member_count}')
+                    elif channel.name.startswith('Bots:'):
+                        await channel.edit(name=f'Bots: {sum(member.bot for member in guild.members)}')
+                    elif channel.name.startswith('Server Boosts:'):
+                        await channel.edit(name=f'Server Boosts: {guild.premium_subscription_count}')
