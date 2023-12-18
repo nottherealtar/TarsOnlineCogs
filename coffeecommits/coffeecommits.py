@@ -2,7 +2,7 @@ import discord
 from redbot.core import commands, tasks
 import aiohttp
 
-class GitHubCommits(commands.Cog):
+class CoffeeCommits(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.config = bot.get_cog("Config")
