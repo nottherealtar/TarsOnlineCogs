@@ -50,7 +50,7 @@ class VaryQuote(BaseCog):
             return
         
         async with aiohttp.ClientSession() as session:
-            async with session.get(f"https://varyquote-api.herokuapp.com/quotes/{category}") as response:
+            async with session.get(f"https://api.api-ninjas.com/v1/quotes?category={category}") as response:
                 if response.status == 200:
                     data = await response.json()
                     if data: # check if data is not empty
