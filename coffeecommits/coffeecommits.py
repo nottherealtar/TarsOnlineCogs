@@ -1,5 +1,6 @@
 import discord
-from redbot.core import commands, tasks
+from redbot.core import commands
+from discord import tasks
 import aiohttp
 
 class CoffeeCommits(commands.Cog):

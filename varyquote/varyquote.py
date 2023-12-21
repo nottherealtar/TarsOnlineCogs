@@ -21,12 +21,12 @@ class VaryQuote(BaseCog):
         return self.api_token
 
     @commands.group()
-    async def ccvaryquote(self, ctx):
+    async def varyquote(self, ctx):
         """Get a random quote from a chosen category"""
         if ctx.invoked_subcommand is None:
             await ctx.send_help()
 
-    @ccvaryquote.command(name="list")
+    @varyquote.command(name="list")
     async def list_categories(self, ctx):
         """
         Display the available quote categories
@@ -36,7 +36,7 @@ class VaryQuote(BaseCog):
         embed.description = "\n".join(categories)
         await ctx.send(embed=embed)
 
-    @ccvaryquote.command(name="get")
+    @varyquote.command(name="get")
     async def get_quote(self, ctx, category):
         """
         Get a random quote from the specified category
