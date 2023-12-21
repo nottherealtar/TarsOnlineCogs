@@ -31,29 +31,33 @@ class VaryQuote(BaseCog):
         """
         Display the available quote categories
         """
-        categories = ["age", "alone", "amazing", "anger", "architecture", "art", "attitude", "beauty", "best", "birthday", "business", "car", "change", "communication", "computers", "cool", "courage", "dad", "dating", "death", "design", "dreams", "education", "environmental", "equality", "experience", "failure", "faith", "family", "famous", "fear", "fitness"] 
-        embed = discord.Embed(title="Available Categories")
+        categories = ["age", "alone", "amazing", "anger", "architecture", "art", "attitude", "beauty", "best", "birthday", "business", "car", "change", "communication", "computers", "cool", "courage", "dad", "dating", "death", "design", "dreams", "education", "environmental", "equality", "experience", "failure", "faith", "family", "famous", "fear", "fitness"]
+        embed = discord.Embed(title="Available Categories") 
         embed.description = "\n".join(categories)
         await ctx.send(embed=embed)
 
     @varyquote.command(name="get")
     async def get_quote(self, ctx, category):
+
         """
         Get a random quote from the specified category
         """
-        valid_categories = ["inspire", "management", "sports", "life", "funny"] 
+
+        valid_categories = ["age", "alone", "amazing", "anger", "architecture", "art", "attitude", "beauty", "best", "birthday", "business", "car", "change", "communication", "computers", "cool", "courage", "dad", "dating", "death", "design", "dreams", "education", "environmental", "equality", "experience", "failure", "faith", "family", "famous", "fear", "fitness"]
 
         if category not in valid_categories:
             await ctx.send(f"Invalid category. Use `{ctx.prefix}varyquote list` to view available categories.")
             return
-
+        
         async with aiohttp.ClientSession() as session:
             async with session.get(f"https://varyquote-api.herokuapp.com/quotes/{category}") as response:
                 if response.status == 200:
                     data = await response.json()
-                    quote = random.choice(data)
-                    embed = discord.Embed(title=quote["category"], description=quote["quote"])
-                    embed.set_footer(text=quote["author"])
-                    await ctx.send(embed=embed)
+                    if data: # check if data is not empty
+                        quote = random.choice(data)
+                        embed = discord.Embed(title=quote["category"], description=quote["quote"])
+                        embed.set_footer(text=quote["author"])
+                        await ctx.send(embed=embed)
                 else:
-                    await ctx.send("An error occurred while fetching the quote.")
+                    await ctx.send("No quotes are available for the given category.")
+                    
