@@ -7,7 +7,7 @@
 # 
 
 import discord
-from redbot.core import commands, data_manager
+from redbot.core import commands, Config
 from redbot.core.utils.menus import menu, DEFAULT_CONTROLS
 import requests
 import json
@@ -117,7 +117,7 @@ class FreshTechAfrica(commands.Cog):
         self.bot = bot
         self.freshdesk_domain = "your-freshdesk-domain.freshdesk.com"
         self.freshdesk_prefix = "/api/v2"
-        self.config = data_manager.get_config("FreshdeskCog")
+        self.config = Config.get_conf(self, identifier=1234567890)  # Change the identifier as needed
 
     async def get_api_key(self):
         return await self.config.api_key()
