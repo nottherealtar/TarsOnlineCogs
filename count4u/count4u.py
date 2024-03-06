@@ -28,4 +28,4 @@ class Count4U(commands.Cog):
             await sleep(1800)  # Count every 30 minutes
 
 def setup(bot):
-    bot.add_cog(InfiniCount(bot))
+    bot.add_cog(Count4U(bot))
