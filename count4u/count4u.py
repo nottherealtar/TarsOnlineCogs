@@ -19,6 +19,7 @@ class Count4U(commands.Cog):
         self.config.register_guild(**default_guild)
 
     async def cog_check(self, ctx):
+        """Check if automated counting is enabled."""
         if not await self.config.guild(ctx.guild).counting_enabled():
             raise commands.CheckFailure("Automated counting is disabled.")
         return True
@@ -27,11 +28,7 @@ class Count4U(commands.Cog):
     async def cccount4u(self, ctx):
         """Automated counting commands."""
         if ctx.invoked_subcommand is None:
-            embed = discord.Embed(title="Count4U Subcommands", description="Use these commands to manage automated counting.", color=discord.Color.blue())
-            embed.add_field(name="start", value="Set the starting number for automated counting.", inline=False)
-            embed.add_field(name="toggle", value="Toggle automated counting.", inline=False)
-            embed.add_field(name="channel", value="Set the counting channel for automated counting.", inline=False)
-            await ctx.send(embed=embed)
+            await ctx.send_help()
 
     @cccount4u.command(name="channel")
     @checks.admin_or_permissions(manage_channels=True)
@@ -50,10 +47,13 @@ class Count4U(commands.Cog):
     @cccount4u.command(name="start")
     async def set_start_number(self, ctx, start_number: int):
         """Set the starting number for automated counting."""
+        if start_number < 0:
+            return await ctx.send("Start number cannot be negative.")
         await self.config.guild(ctx.guild).start_number.set(start_number)
         await ctx.send(f"Starting number set to {start_number}.")
 
     async def start_counting(self, guild):
+        """Start automated counting."""
         counting_channel_id = await self.config.guild(guild).counting_channel_id()
         counting_channel = guild.get_channel(counting_channel_id)
         if counting_channel:
