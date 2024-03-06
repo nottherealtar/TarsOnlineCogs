@@ -2,7 +2,7 @@ import discord
 from redbot.core import commands, Config
 from asyncio import sleep
 
-class InfiniCount(commands.Cog):
+class Count4U(commands.Cog):
     """Cog for automated counting in the InfiniCount channel."""
 
     def __init__(self, bot):
