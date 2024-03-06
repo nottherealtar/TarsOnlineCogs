@@ -21,14 +21,19 @@ class InfiniCount(commands.Cog):
         """Commands for managing InfiniCount."""
         pass
 
+    async def counting_channel_exists(self, guild):
+        counting_channel_id = await self.config.guild(guild).counting_channel_id()
+        if counting_channel_id:
+            channel = guild.get_channel(counting_channel_id)
+            return channel is not None
+        return False
+
     @infinicount.command(name="create")
     @checks.admin_or_permissions(manage_channels=True)
     async def create_counting_channel(self, ctx):
         """Create a counting channel where only +1 increments are allowed."""
         guild = ctx.guild
-        counting_channel_id = await self.config.guild(guild).counting_channel_id()
-
-        if counting_channel_id:
+        if await self.counting_channel_exists(guild):
             return await ctx.send("A counting channel already exists in this guild.")
 
         overwrites = {
@@ -47,23 +52,25 @@ class InfiniCount(commands.Cog):
 
         counting_channel_id = await self.config.guild(message.guild).counting_channel_id()
 
-        if counting_channel_id == message.channel.id:
-            content = message.content
-            previous_number = await self.config.guild(message.guild).previous_number()
+        if counting_channel_id:
+            channel = message.guild.get_channel(counting_channel_id)
+            if channel and channel.id == message.channel.id:
+                content = message.content
+                previous_number = await self.config.guild(message.guild).previous_number()
 
-            if not content.isdigit():
-                await message.delete()
-                await message.channel.send("Invalid input! Only numbers are allowed.", delete_after=3)
-                return
+                if not content.isdigit():
+                    await message.delete()
+                    await message.channel.send("Invalid input! Only numbers are allowed.", delete_after=3)
+                    return
 
-            number = int(content)
+                number = int(content)
 
-            if number != (previous_number + 1):
-                await message.delete()
-                await message.channel.send("Invalid number! Only +1 increments are allowed.", delete_after=3)
-                return
+                if number != (previous_number + 1):
+                    await message.delete()
+                    await message.channel.send("Invalid number! Only +1 increments are allowed.", delete_after=3)
+                    return
 
-            await self.config.guild(message.guild).previous_number.set(number)
+                await self.config.guild(message.guild).previous_number.set(number)
 
 def setup(bot):
     bot.add_cog(InfiniCount(bot))
