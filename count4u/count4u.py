@@ -1,5 +1,5 @@
 import discord
-from redbot.core import commands, Config, checks, errors
+from redbot.core import commands, Config, checks
 from datetime import datetime, timedelta
 
 class Count4U(commands.Cog):
@@ -20,14 +20,18 @@ class Count4U(commands.Cog):
 
     async def cog_check(self, ctx):
         if not await self.config.guild(ctx.guild).counting_enabled():
-            raise errors.DisabledCommand()
+            raise commands.CheckFailure("Automated counting is disabled.")
         return True
 
     @commands.group()
     async def cccount4u(self, ctx):
         """Automated counting commands."""
         if ctx.invoked_subcommand is None:
-            await ctx.send_help()
+            embed = discord.Embed(title="Count4U Subcommands", description="Use these commands to manage automated counting.", color=discord.Color.blue())
+            embed.add_field(name="start", value="Set the starting number for automated counting.", inline=False)
+            embed.add_field(name="toggle", value="Toggle automated counting.", inline=False)
+            embed.add_field(name="channel", value="Set the counting channel for automated counting.", inline=False)
+            await ctx.send(embed=embed)
 
     @cccount4u.command(name="channel")
     @checks.admin_or_permissions(manage_channels=True)
@@ -48,25 +52,6 @@ class Count4U(commands.Cog):
         """Set the starting number for automated counting."""
         await self.config.guild(ctx.guild).start_number.set(start_number)
         await ctx.send(f"Starting number set to {start_number}.")
-
-    async def auto_detect_counting_channel(self, guild):
-        counting_channel_id = await self.config.guild(guild).counting_channel_id()
-        if counting_channel_id:
-            return
-        for channel in guild.channels:
-            if channel.name == "InfiniCount":
-                await self.config.guild(guild).counting_channel_id.set(channel.id)
-                await channel.send("Automated counting channel set.")
-                await self.auto_detect_start_number(channel)
-                return
-
-    async def auto_detect_start_number(self, channel):
-        async for message in channel.history(limit=1, oldest_first=True):
-            if message.content.isdigit():
-                start_number = int(message.content)
-                await self.config.guild(channel.guild).start_number.set(start_number)
-                await channel.send(f"Starting number set to {start_number}.")
-                return
 
     async def start_counting(self, guild):
         counting_channel_id = await self.config.guild(guild).counting_channel_id()
