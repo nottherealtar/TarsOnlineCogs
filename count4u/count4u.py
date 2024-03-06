@@ -19,7 +19,7 @@ class Count4U(commands.Cog):
         await self.bot.wait_until_ready()
         while not self.bot.is_closed():
             for guild in self.bot.guilds:
-                counting_channel = discord.utils.get(guild.channels, name="InfiniCount")
+                counting_channel = discord.utils.get(guild.channels, name="infinicount")
                 if counting_channel:
                     last_count = await self.config.guild(guild).last_count()
                     next_count = last_count + 1
