@@ -1,6 +1,5 @@
 import discord
 from redbot.core import commands, checks, Config
-import random
 
 class InfiniCount(commands.Cog):
     """Cog for creating a counting channel where only +1 increments are allowed."""
@@ -43,24 +42,28 @@ class InfiniCount(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message):
-        if not message.guild:
+        if not message.guild or message.author.bot:
             return
 
         counting_channel_id = await self.config.guild(message.guild).counting_channel_id()
 
         if counting_channel_id == message.channel.id:
             content = message.content
-            if not content.isdigit() or int(content) != (await self.config.guild(message.guild).previous_number() + 1):
-                await message.delete()
-                await message.channel.send("Invalid number! Only +1 increments are allowed.")
-            else:
-                await self.config.guild(message.guild).previous_number.set(int(content))
-                await self.react_with_random_emoji(message)
+            previous_number = await self.config.guild(message.guild).previous_number()
 
-    async def react_with_random_emoji(self, message):
-        emojis = await self.bot.fetch_guild_emojis(message.guild)
-        random_emoji = random.choice(emojis)
-        await message.add_reaction(random_emoji)
+            if not content.isdigit():
+                await message.delete()
+                await message.channel.send("Invalid input! Only numbers are allowed.", delete_after=3)
+                return
+
+            number = int(content)
+
+            if number != (previous_number + 1):
+                await message.delete()
+                await message.channel.send("Invalid number! Only +1 increments are allowed.", delete_after=3)
+                return
+
+            await self.config.guild(message.guild).previous_number.set(number)
 
 def setup(bot):
     bot.add_cog(InfiniCount(bot))
