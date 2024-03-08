@@ -1,4 +1,7 @@
+import discord
+from redbot.core import commands, checks, Config
 import logging
+import asyncio
 
 class Count4U(commands.Cog):
     """Cog for automated counting in the InfiniCount channel."""
@@ -51,21 +54,21 @@ class Count4U(commands.Cog):
             self.logger.error(f"Error in testcount command: {e}")
 
     async def auto_count(self):
-        await self.bot.wait_until_ready()
-        while not self.bot.is_closed():
-            for guild in self.bot.guilds:
-                try:
-                    counting_channel_name = await self.config.guild(guild).counting_channel_name()
-                    counting_channel = discord.utils.get(guild.channels, name=counting_channel_name)
-                    if counting_channel:
-                        last_count = await self.config.guild(guild).last_count()
-                        next_count = last_count + 1
-                        await counting_channel.send(next_count)
-                        await self.config.guild(guild).last_count.set(next_count)
-                except Exception as e:
-                    self.logger.error(f"Error in auto_count: {e}")
-            interval = await self.config.guild(guild).interval()
-            await sleep(interval)  # Count every interval seconds
+                await self.bot.wait_until_ready()
+                while not self.bot.is_closed():
+                    for guild in self.bot.guilds:
+                        try:
+                            counting_channel_name = await self.config.guild(guild).counting_channel_name()
+                            counting_channel = discord.utils.get(guild.channels, name=counting_channel_name)
+                            if counting_channel:
+                                last_count = await self.config.guild(guild).last_count()
+                                next_count = last_count + 1
+                                await counting_channel.send(next_count)
+                                await self.config.guild(guild).last_count.set(next_count)
+                        except Exception as e:
+                            self.logger.error(f"Error in auto_count: {e}")
+                    interval = await self.config.guild(guild).interval()
+                    await asyncio.sleep(interval)  # Count every interval seconds
 
 def setup(bot):
     bot.add_cog(Count4U(bot))
