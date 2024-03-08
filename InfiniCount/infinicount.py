@@ -27,6 +27,17 @@ class InfiniCount(commands.Cog):
             channel = guild.get_channel(counting_channel_id)
             return channel is not None
         return False
+    
+    @infinicount.command(name="reset")
+    @checks.admin_or_permissions(manage_channels=True)
+    async def reset_count(self, ctx):
+        """Reset the count in the counting channel."""
+        guild = ctx.guild
+        if await self.counting_channel_exists(guild):
+            await self.config.guild(guild).previous_number.set(0)
+            await ctx.send("Count has been reset to 0.")
+        else:
+            await ctx.send("No counting channel exists in this guild.")
 
     @infinicount.command(name="create")
     @checks.admin_or_permissions(manage_channels=True)
