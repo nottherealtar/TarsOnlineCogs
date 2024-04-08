@@ -1,0 +1,17 @@
+{
+    "author": [
+        "nottherealtar"
+    ],
+    "install_msg": "`[p]help howgay`",
+    "name": "howgay",
+    "short": "Rate how gay a user/yourself is.",
+    "description": "This cog rates how gay a user is.",
+    "min_bot_version": "3.5.0",
+    "tags": [
+        "gayness",
+        "level",
+        "fun"
+    ],
+    "end_user_data_statement": "This cog does not persistently store any data or metadata about users.",
+    "type": "COG"
+}
