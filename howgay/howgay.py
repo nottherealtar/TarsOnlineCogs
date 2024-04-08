@@ -17,7 +17,7 @@ class HowGay(commands.Cog):
             "Ultra Mega Super Gay": (90, 100),
             "Super Duper Gay": (80, 90),
             "Mega Gay": (70, 80),
-            "Gay": (60, 70),
+            "Gay lmao": (60, 70),
             "Kinda Gay": (50, 60),
             "Not So Gay": (40, 50),
             "Straight?": (30, 40),
@@ -49,7 +49,7 @@ class HowGay(commands.Cog):
 
         # Build the embed
         embed = Embed(title=f"How Gay is {target_user.name}?", color=0x00ff00)
-        embed.description = f"{target_user.mention} is {power_level}! {gay_percentage:.2f}% {random.choice(self.emojis)}"
+        embed.description = f"{target_user.mention} is {power_level}!  {gay_percentage:.2f}% {random.choice(self.emojis)}"
         embed.set_footer(text="Powered by the Gay-o-Meter")
 
         # Send the embed
