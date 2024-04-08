@@ -1,4 +1,4 @@
-from .howcracked import HowCracked
+from .howgay import HowGay
 
 async def setup(bot):
-    await bot.add_cog(HowCracked(bot))
+    await bot.add_cog(HowGay(bot))
