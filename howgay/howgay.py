@@ -20,7 +20,7 @@ class HowGay(commands.Cog):
             "Gay": (60, 70),
             "Kinda Gay": (50, 60),
             "Not So Gay": (40, 50),
-            "Straight": (30, 40),
+            "Straight?": (30, 40),
             "Curious": (20, 30),
             "Questioning": (10, 20),
             "Not Gay": (0, 10),
