@@ -36,7 +36,7 @@ class SuggestMe(commands.Cog):
 
             # Create an embed with the suggestion
             embed = Embed(title=f"Suggestion #{self.suggestion_count} has been added by {ctx.author.name}", description=f'"{suggestion}" - {timestamp}', color=0x800080)
-            embed.set_footer(text=f"Suggestion by {ctx.author.name}", icon_url=ctx.author.avatar_url)
+            embed.set_footer(text=f"Suggestion by {ctx.author.name}", icon_url=ctx.author.avatar.url)
             embed.set_thumbnail(url='https://cdn.discordapp.com/attachments/1170989523895865424/1228294937288769567/360_F_528295970_32SSCHm39wg6hufvVjxEpSxAzU5cew29-removebg-preview.png?ex=662b85cd&is=661910cd&hm=c6c99cd66b7510d2806fcc3dcec59c64a3642b5223ebcad45fb54eda903e9117&')
 
             # Send the suggestion to the context channel
