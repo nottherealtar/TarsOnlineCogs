@@ -1,0 +1,17 @@
+{
+    "author": [
+        "nottherealtar"
+    ],
+    "install_msg": "`[p]help howcracked`",
+    "name": "howcracked",
+    "short": "Rate the cracked level of a user or yourself.",
+    "description": "This cog rates the cracked level of a user or yourself.",
+    "min_bot_version": "3.5.0",
+    "tags": [
+        "skill",
+        "level",
+        "fun"
+    ],
+    "end_user_data_statement": "This cog does not persistently store any data or metadata about users.",
+    "type": "COG"
+}
