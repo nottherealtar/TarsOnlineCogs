@@ -70,8 +70,26 @@ async def on_reaction_add(self, reaction, user):
     if reaction.message.channel.name != 'suggestme':
         return
 
-    if reaction.message.embeds and "Suggestion #" in reaction.message.embeds[0].title and staff_role in user.roles:
-        if str(reaction.emoji) == "✅":
+    if reaction.message.embeds and "Suggestion #" in reaction.message.embeds[0].title:
+        if str(reaction.emoji) == "👍":
+            # Check if the thumbs up reactions are 4 or more
+            thumbs_up_reaction = next((r for r in reaction.message.reactions if str(r.emoji) == "👍"), None)
+            if thumbs_up_reaction and thumbs_up_reaction.count >= 4:
+                # Get the suggestions channel
+                suggestions_channel = utils.get(reaction.message.guild.channels, name="suggestions")
+                if suggestions_channel is None:
+                    await user.send("The suggestions channel does not exist.")
+                    return
+
+                # Update the embed footer with the upvotes count
+                embed = reaction.message.embeds[0]
+                embed.set_footer(text=f"{embed.footer.text} | Published with {thumbs_up_reaction.count} upvotes")
+
+                # Publish the suggestion to the suggestions channel
+                await suggestions_channel.send(embed=embed)
+                await reaction.message.delete()
+
+        elif str(reaction.emoji) == "✅" and staff_role in user.roles:
             # Get the suggestions channel
             suggestions_channel = utils.get(reaction.message.guild.channels, name="suggestions")
             if suggestions_channel is None:
@@ -82,6 +100,6 @@ async def on_reaction_add(self, reaction, user):
             await suggestions_channel.send(embed=reaction.message.embeds[0])
             await reaction.message.delete()
 
-        elif str(reaction.emoji) == "❌":
+        elif str(reaction.emoji) == "❌" and staff_role in user.roles:
             # Delete the suggestion
             await reaction.message.delete()
