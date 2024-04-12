@@ -1,4 +1,4 @@
-from .howcracked import HowCracked
+from .suggestme import SuggestMe
 
 async def setup(bot):
-    await bot.add_cog(HowCracked(bot))
+    await bot.add_cog(SuggestMe(bot))

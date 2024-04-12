@@ -7,95 +7,71 @@
 # 
 
 from redbot.core import commands
-from discord import Embed, User
-import random
+from discord import Embed, User, utils
+from typing import Optional
+from datetime import datetime
 
-class HowCracked(commands.Cog):
+class SuggestMe(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.suggestion_count = 0
 
     @commands.command()
-    async def howcracked(self, ctx, user: User = None):
+    async def suggestme(self, ctx, *, suggestion: str):
         """
-        Rate the cracked level of a user or yourself.
+        Lets members with the Verified role to suggest features for the server and these suggestions get posted in a suggestions channel for the staff to review and for the server to vote for.
         """
-        # Define cool power levels and emojis
-        cool_power_levels = [
-            "Ultra Mega Super Cracked",
-            "Super Duper Cracked",
-            "Mega Cracked",
-            "Cracked",
-            "Kinda Cracked",
-            "Not So Cracked",
-            "Un-Cracked",
-            "Butt-Crack-ed",
-            "Cement-Crack-ed",
-        ]
+        # Check if the user has the Verified role
+        verified_role = utils.get(ctx.guild.roles, name="Verified")
+        if verified_role is None:
+            await ctx.send("The Verified role does not exist.")
+            return
 
-        emojis = ["💯", "😎", "🔥", "🤯", "👀"]
+        if verified_role in ctx.author.roles:
+            # Increment the suggestion count
+            self.suggestion_count += 1
 
-        cool_ability_levels = [
-            "Ultra Mega Super Charismatic",
-            "Super Duper Strong",
-            "Mega Intelligent",
-            "Mildly Psychic",
-            "Slightly Telekinetic",
-            "Not So Nimble",
-            "Un-coordinated",
-            "Butt-Smooth Talker",
-            "Cement-Brained",
-            "Intellect",
-            "Rizz",
-        ]
+            # Get the current timestamp
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        # Get the user to rate
-        target_user = user or ctx.author
+            # Create an embed with the suggestion
+            embed = Embed(title=f"Suggestion #{self.suggestion_count} has been added by {ctx.author.name}", description=f'"{suggestion}" - {timestamp}', color=0x800080)
+            embed.set_footer(text=f"Suggestion by {ctx.author.name}", icon_url=ctx.author.avatar_url)
+            embed.set_thumbnail(url='https://cdn.discordapp.com/attachments/1170989523895865424/1228294937288769567/360_F_528295970_32SSCHm39wg6hufvVjxEpSxAzU5cew29-removebg-preview.png?ex=662b85cd&is=661910cd&hm=c6c99cd66b7510d2806fcc3dcec59c64a3642b5223ebcad45fb54eda903e9117&')
 
-        # Generate a random cracked percentage
-        cracked_percentage = random.uniform(0, 100)
+            # Send the suggestion to the context channel
+            message = await ctx.send(embed=embed)
 
-        # Determine the cool power level based on the percentage
-        power_level = None
-        if cracked_percentage < 7:
-            power_level = "Cement-Crack-ed"
-        elif cracked_percentage < 25:
-            power_level = "Not So Cracked"
-        elif cracked_percentage < 50:
-            power_level = "Kinda Cracked"
-        elif cracked_percentage < 75:
-            power_level = "Cracked"
-        elif cracked_percentage < 90:
-            power_level = "Mega Cracked"
-        elif cracked_percentage < 97:
-            power_level = "Super Duper Cracked"
+            # Add reactions for voting, verifying, and deleting
+            await message.add_reaction("👍")
+            await message.add_reaction("👎")
+            await message.add_reaction("✅")
+            await message.add_reaction("❌")
+
+            await ctx.send("Your suggestion has been posted.")
         else:
-            power_level = "Ultra Mega Super Cracked"
+            await ctx.send("You must have the Verified role to suggest features.")
 
-        # Determine the cool ability level based on the percentage
-        ability_level = None
-        if cracked_percentage < 7:
-            ability_level = "Cement-Brained"
-        elif cracked_percentage < 25:
-            ability_level = "Un-coordinated"
-        elif cracked_percentage < 50:
-            ability_level = "Not So Nimble"
-        elif cracked_percentage < 75:
-            ability_level = "Mildly Psychic"
-        elif cracked_percentage < 90:
-            ability_level = "Slightly Telekinetic"
-        elif cracked_percentage < 97:
-            ability_level = "Mega Intelligent"
-        else:
-            ability_level = "Ultra Mega Super Charismatic"
+    @commands.Cog.listener()
+    async def on_reaction_add(self, reaction, user):
+        # Check if the reaction is on a suggestion and the user is a staff member
+        staff_role = utils.get(user.guild.roles, name="Staff")
+        if staff_role is None:
+            await user.send("The Staff role does not exist.")
+            return
 
-        # Build the embed
-        embed = Embed(title=f"How Cracked is {target_user.name}?", color=0x00ff00)
-        embed.description = f"{target_user.mention} is {power_level}! {cracked_percentage:.2f}% {ability_level} {random.choice(emojis)}"
-        embed.set_footer(text="Powered by the Cracked-o-Meter and goku")
+        if reaction.message.embeds and "Suggestion #" in reaction.message.embeds[0].title and staff_role in user.roles:
+            if str(reaction.emoji) == "✅":
+                # Get the suggestions channel
+                suggestions_channel = utils.get(reaction.message.guild.channels, name="suggestions")
+                if suggestions_channel is None:
+                    await user.send("The suggestions channel does not exist.")
+                    return
 
-        # Send the embed
-        await ctx.send(embed=embed)
+                # Publish the suggestion to the suggestions channel
+                await suggestions_channel.send(embed=reaction.message.embeds[0])
+                await reaction.message.delete()
 
-# Required to make the cog load
-def setup(bot):
-    bot.add_cog(HowCracked(bot))
+            elif str(reaction.emoji) == "❌":
+                # Delete the suggestion
+                await reaction.message.delete()
