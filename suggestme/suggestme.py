@@ -66,10 +66,6 @@ async def on_reaction_add(self, reaction, user):
         await user.send("The Staff role does not exist.")
         return
 
-    # Check if the reaction is added in the 'suggestme' channel
-    if reaction.message.channel.name != 'suggestme':
-        return
-
     if reaction.message.embeds and "Suggestion #" in reaction.message.embeds[0].title:
         if str(reaction.emoji) == "👍":
             # Check if the thumbs up reactions are 4 or more
