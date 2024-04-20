@@ -104,6 +104,14 @@ class HowCracked(commands.Cog):
         # Build the embed
         embed = Embed(title=f"How Cracked is {target_user.name}?", color=0x00ff00)
         embed.description = f"{target_user.mention} is {power_level}! {cracked_percentage:.2f}% {ability_level} {random.choice(emojis)}"
+        
+        # Check if the gif URL exists for the power level
+        gif_url = gifs.get(power_level)
+        if gif_url:
+            embed.set_image(url=gif_url)  # Add the gif
+        else:
+            print(f"No gif found for power level: {power_level}")
+
         embed.set_footer(text="Powered by the Cracked-o-Meter and Goku")
 
         # Send the embed
