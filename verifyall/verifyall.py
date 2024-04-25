@@ -7,25 +7,32 @@
 # 
 
 from redbot.core import commands
-from discord import Embed, User, utils
+from discord import Embed, Member, utils
+import asyncio
 
 class VerifyAll(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
     @commands.command()
-    async def verifyall(self, ctx, user: User = None):
+    async def verifyall(self, ctx, member: Member = None):
         # Get the "Verified" role. Change the name if your role is named differently.
         verified_role = utils.get(ctx.guild.roles, name="Verified")
 
-        if user:
-            # If a user is specified, only check that user.
-            if len(user.roles) == 1:  # The @everyone role is always assigned, so if a user has 1 role, they have no additional roles.
-                await user.add_roles(verified_role)
-                await ctx.send(f"{user.name} has been verified.")
+        if member:
+            # If a member is specified, only check that member.
+            if len(member.roles) == 1:  # The @everyone role is always assigned, so if a member has 1 role, they have no additional roles.
+                await member.add_roles(verified_role)
+                await ctx.send(f"{member.name} has been verified.")
         else:
-            # If no user is specified, check all users.
+            # If no member is specified, check all members.
+            total_members = len(ctx.guild.members)
+            verified_count = 0
             for member in ctx.guild.members:
-                if len(member.roles) == 1:  # The @everyone role is always assigned, so if a user has 1 role, they have no additional roles.
+                if len(member.roles) == 1:  # The @everyone role is always assigned, so if a member has 1 role, they have no additional roles.
                     await member.add_roles(verified_role)
-            await ctx.send("All users have been verified.")
+                    verified_count += 1
+                    if verified_count % 10 == 0:  # Update progress for every 10 members verified
+                        await ctx.send(f"Progress: {verified_count}/{total_members} members verified.")
+                    await asyncio.sleep(3)  # Sleep for 1 second to avoid rate limiting
+            await ctx.send("All members have been verified.")
