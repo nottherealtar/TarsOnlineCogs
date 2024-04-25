@@ -1,0 +1,17 @@
+{
+    "author": [
+        "nottherealtar"
+    ],
+    "install_msg": "`[p]help verifyall`",
+    "name": "teachme",
+    "short": "Verified for all",
+    "description": "Allows you to automatically assign the verified role to all members in your guild.",
+    "min_bot_version": "3.5.0",
+    "tags": [
+        "util",
+        "roles",
+        "fun"
+    ],
+    "end_user_data_statement": "This cog does not persistently store any data or metadata about users.",
+    "type": "COG"
+}
