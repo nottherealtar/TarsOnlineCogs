@@ -7,7 +7,7 @@
 # 
 
 from redbot.core import commands
-from discord import Embed, User
+from discord import Embed, User, utils
 
 class VerifyAll(commands.Cog):
     def __init__(self, bot):
@@ -15,7 +15,17 @@ class VerifyAll(commands.Cog):
 
     @commands.command()
     async def verifyall(self, ctx, user: User = None):
-       #Checks all users and assigns the verified role to users that dont have any roles assigned.
-       #Exclude the bot from the list.
-       #If a user is specified, only that user will be checked. but if none is specified then it applies to all users.
-       
+        # Get the "Verified" role. Change the name if your role is named differently.
+        verified_role = utils.get(ctx.guild.roles, name="Verified")
+
+        if user:
+            # If a user is specified, only check that user.
+            if len(user.roles) == 1:  # The @everyone role is always assigned, so if a user has 1 role, they have no additional roles.
+                await user.add_roles(verified_role)
+                await ctx.send(f"{user.name} has been verified.")
+        else:
+            # If no user is specified, check all users.
+            for member in ctx.guild.members:
+                if len(member.roles) == 1:  # The @everyone role is always assigned, so if a user has 1 role, they have no additional roles.
+                    await member.add_roles(verified_role)
+            await ctx.send("All users have been verified.")
