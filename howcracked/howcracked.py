@@ -6,13 +6,20 @@
 # |_| \_|\___/ |_|   |_| |_| |_|_____|_| \_\_____/_/   \_\_____|_/_/   \_\_| \_\
 # 
 
-from redbot.core import commands
+from redbot.core import commands, Config
 from discord import Embed, User
 import random
+from datetime import datetime
 
 class HowCracked(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.config = Config.get_conf(self, identifier=1234567890)
+        default_global = {
+            "highest": {"user": None, "percentage": 0, "time": None},
+            "lowest": {"user": None, "percentage": 100, "time": None},
+        }
+        self.config.register_global(**default_global)
 
     @commands.command()
     async def howcracked(self, ctx, user: User = None):
@@ -60,6 +67,16 @@ class HowCracked(commands.Cog):
             "Butt-Crack-ed": "https://cdn.discordapp.com/attachments/1170989523895865424/1231322898015191040/homer-simpson.gif?ex=663689cf&is=662414cf&hm=94ebbbb21c9a16cfea87d5e05b112d056bfec370dacb345413b504c99802106e&",
             "On-Crack": "https://cdn.discordapp.com/attachments/1170989523895865424/1231323348445692004/IMG_2579.gif?ex=662566bb&is=6624153b&hm=82eaa02dfd5d734e577a5d5c38c9dca571b44c3812f6660a1e0a3ea8e5ad6896&",
         }
+        
+        # Update the record if necessary
+        highest = await self.config.highest()
+        lowest = await self.config.lowest()
+        if cracked_percentage > highest["percentage"]:
+            highest = {"user": str(target_user), "percentage": cracked_percentage, "time": str(datetime.now())}
+            await self.config.highest.set(highest)
+        if cracked_percentage < lowest["percentage"]:
+            lowest = {"user": str(target_user), "percentage": cracked_percentage, "time": str(datetime.now())}
+            await self.config.lowest.set(lowest)
 
         # Get the user to rate
         target_user = user or ctx.author
@@ -115,6 +132,21 @@ class HowCracked(commands.Cog):
         embed.set_footer(text="Powered by the Cracked-o-Meter and Goku")
 
         # Send the embed
+        await ctx.send(embed=embed)
+        
+    @commands.command()
+    async def record(self, ctx, record_type: str):
+        if record_type not in ["highest", "lowest"]:
+            await ctx.send("Invalid record type. Please specify either 'highest' or 'lowest'.")
+            return
+
+        record = await self.config.get_attr(record_type)()
+        if record["user"] is None:
+            await ctx.send(f"No {record_type} record found.")
+            return
+
+        embed = Embed(title=f"{record_type.capitalize()} Cracked Record", color=0x00ff00)
+        embed.description = f"{record['user']} holds the record for the {record_type} cracked percentage with {record['percentage']:.2f}% since {record['time']}."
         await ctx.send(embed=embed)
 
 # Required to make the cog load
