@@ -146,7 +146,7 @@ class HowCracked(commands.Cog):
             return
 
         if record_type == "highest":
-            record_date = datetime.strptime(record['time'], '%Y-%m-%d %H:%M:%S.%f')
+            record_date = datetime.fromtimestamp(record['time'])
         elif record_type == "lowest":
             record_date = datetime.fromtimestamp(record['time'])
         days_since_record = (datetime.utcnow() - record_date).days
