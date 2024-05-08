@@ -9,7 +9,7 @@
 from redbot.core import commands, Config
 from discord import Embed, User
 import random
-from datetime import datetime, timedelta
+from datetime import datetime
 
 class HowCracked(commands.Cog):
     def __init__(self, bot):
@@ -145,7 +145,7 @@ class HowCracked(commands.Cog):
             await ctx.send(f"No {record_type} record found.")
             return
 
-        record_date = datetime.fromtimestamp(int(record['time']))
+        record_date = datetime.strptime(record['time'], '%Y-%m-%d %H:%M:%S.%f')
         days_since_record = (datetime.utcnow() - record_date).days
 
         embed = Embed(title=f"{record_type.capitalize()} Cracked Record", color=0x00ff00)
