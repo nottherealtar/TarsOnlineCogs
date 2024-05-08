@@ -9,7 +9,7 @@
 from redbot.core import commands, Config
 from discord import Embed, User
 import random
-from datetime import datetime
+from datetime import datetime, timedelta
 
 class HowCracked(commands.Cog):
     def __init__(self, bot):
@@ -78,10 +78,10 @@ class HowCracked(commands.Cog):
         highest = await self.config.highest()
         lowest = await self.config.lowest()
         if cracked_percentage > highest["percentage"]:
-            highest = {"user": str(target_user), "percentage": cracked_percentage, "time": str(datetime.now())}
+            highest = {"user": str(target_user), "percentage": cracked_percentage, "time": datetime.utcnow().timestamp()}
             await self.config.highest.set(highest)
         if cracked_percentage < lowest["percentage"]:
-            lowest = {"user": str(target_user), "percentage": cracked_percentage, "time": str(datetime.now())}
+            lowest = {"user": str(target_user), "percentage": cracked_percentage, "time": datetime.utcnow().timestamp()}
             await self.config.lowest.set(lowest)
 
         # Determine the cool power level based on the percentage
@@ -145,8 +145,11 @@ class HowCracked(commands.Cog):
             await ctx.send(f"No {record_type} record found.")
             return
 
+        record_date = datetime.fromtimestamp(record['time'])
+        days_since_record = (datetime.utcnow() - record_date).days
+
         embed = Embed(title=f"{record_type.capitalize()} Cracked Record", color=0x00ff00)
-        embed.description = f"{record['user']} holds the record for the {record_type} cracked percentage with {record['percentage']:.2f}% since {record['time']}."
+        embed.description = f"{record['user']} holds the record for the {record_type} cracked percentage with {record['percentage']:.2f}% for {days_since_record} days."
         await ctx.send(embed=embed)
 
 # Required to make the cog load
