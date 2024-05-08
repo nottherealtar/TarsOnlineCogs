@@ -152,8 +152,7 @@ class HowCracked(commands.Cog):
         days_since_record = (datetime.utcnow() - record_date).days
 
         embed = Embed(title=f"{record_type.capitalize()} Cracked Record 😎", color=0x00ff00)
-        embed.description = f"### {record['user']} 
-        holds the record for the **{record_type}** cracked percentage with *{record['percentage']:.2f}%* 🔥 for **{days_since_record}** days ⌛"
+        embed.description = f"**{record['user']}** holds the record for the **{record_type}** cracked percentage with *{record['percentage']:.2f}%* 🔥 for `{days_since_record}` days ⌛"
         await ctx.send(embed=embed)
 
 # Required to make the cog load
