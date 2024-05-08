@@ -68,6 +68,12 @@ class HowCracked(commands.Cog):
             "On-Crack": "https://cdn.discordapp.com/attachments/1170989523895865424/1231323348445692004/IMG_2579.gif?ex=662566bb&is=6624153b&hm=82eaa02dfd5d734e577a5d5c38c9dca571b44c3812f6660a1e0a3ea8e5ad6896&",
         }
         
+        # Get the user to rate
+        target_user = user or ctx.author
+
+        # Generate a random cracked percentage
+        cracked_percentage = random.uniform(0, 100)
+        
         # Update the record if necessary
         highest = await self.config.highest()
         lowest = await self.config.lowest()
@@ -77,12 +83,6 @@ class HowCracked(commands.Cog):
         if cracked_percentage < lowest["percentage"]:
             lowest = {"user": str(target_user), "percentage": cracked_percentage, "time": str(datetime.now())}
             await self.config.lowest.set(lowest)
-
-        # Get the user to rate
-        target_user = user or ctx.author
-
-        # Generate a random cracked percentage
-        cracked_percentage = random.uniform(0, 100)
 
         # Determine the cool power level based on the percentage
         power_level = None
