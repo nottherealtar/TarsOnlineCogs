@@ -145,7 +145,7 @@ class HowCracked(commands.Cog):
             await ctx.send(f"No {record_type} record found.")
             return
 
-        record_date = datetime.fromtimestamp(record['time'])
+        record_date = datetime.fromtimestamp(int(record['time']))
         days_since_record = (datetime.utcnow() - record_date).days
 
         embed = Embed(title=f"{record_type.capitalize()} Cracked Record", color=0x00ff00)
