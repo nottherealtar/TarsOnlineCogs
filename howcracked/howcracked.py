@@ -136,41 +136,40 @@ class HowCracked(commands.Cog):
         # Send the embed
         await ctx.send(embed=embed)
         
-    @commands.command()
-    async def record(self, ctx, record_type: str):
-        if ctx.invoked_subcommand is None:
-            if record_type not in ["highest", "lowest"]:
-                await ctx.send("Invalid record type. Please specify either 'highest' or 'lowest'.")
-            return
-
-        record = await self.config.get_attr(record_type)()
-        if record["user"] is None:
-            await ctx.send(f"No {record_type} record found.")
-            return
-
-        if record_type == "highest":
-            record_date = datetime.fromtimestamp(record['time'])
-        elif record_type == "lowest":
-            record_date = datetime.fromtimestamp(record['time'])
-        days_since_record = (datetime.utcnow() - record_date).days
-
-        embed = Embed(title=f"{record_type.capitalize()} Cracked Record 😎", color=0x00ff00)
-        embed.description = f"**{record['user']}** holds the record for the **{record_type}** cracked percentage with *{record['percentage']:.2f}%* 🔥 for `{days_since_record}` days ⌛"
-        await ctx.send(embed=embed)
         
-    @record.command(name="clear")
-    @checks.is_owner()
-    async def record_clear(self, ctx, record_type: str = "both"):
-        if record_type not in ["highest", "lowest", "both"]:
-            await ctx.send("Invalid record type. Please specify 'highest', 'lowest', or 'both'.")
-            return
+record = commands.Group()
 
-        if record_type in ["highest", "both"]:
-            await self.config.highest.set({"user": None, "percentage": 0, "time": None})
-        if record_type in ["lowest", "both"]:
-            await self.config.lowest.set({"user": None, "percentage": 100, "time": None})
+@record.command()
+async def record(self, ctx, record_type: str):
+    if record_type not in ["highest", "lowest"]:
+        await ctx.send("Invalid record type. Please specify either 'highest' or 'lowest'.")
+        return
 
-        await ctx.send(f"Cleared {record_type} record(s).")
+    record = await self.config.get_attr(record_type)()
+    if record["user"] is None:
+        await ctx.send(f"No {record_type} record found.")
+        return
+
+    record_date = datetime.fromtimestamp(record['time'])
+    days_since_record = (datetime.utcnow() - record_date).days
+
+    embed = Embed(title=f"{record_type.capitalize()} Cracked Record 😎", color=0x00ff00)
+    embed.description = f"**{record['user']}** holds the record for the **{record_type}** cracked percentage with *{record['percentage']:.2f}%* 🔥 for `{days_since_record}` days ⌛"
+    await ctx.send(embed=embed)
+
+@record.command(name="clear")
+@checks.is_owner()
+async def record_clear(self, ctx, record_type: str = "both"):
+    if record_type not in ["highest", "lowest", "both"]:
+        await ctx.send("Invalid record type. Please specify 'highest', 'lowest', or 'both'.")
+        return
+
+    if record_type in ["highest", "both"]:
+        await self.config.highest.set({"user": None, "percentage": 0, "time": None})
+    if record_type in ["lowest", "both"]:
+        await self.config.lowest.set({"user": None, "percentage": 100, "time": None})
+
+    await ctx.send(f"Cleared {record_type} record(s).")
 
 # Required to make the cog load
 def setup(bot):
