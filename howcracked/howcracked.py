@@ -138,8 +138,9 @@ class HowCracked(commands.Cog):
         
     @commands.command()
     async def record(self, ctx, record_type: str):
-        if record_type not in ["highest", "lowest"]:
-            await ctx.send("Invalid record type. Please specify either 'highest' or 'lowest'.")
+        if ctx.invoked_subcommand is None:
+            if record_type not in ["highest", "lowest"]:
+                await ctx.send("Invalid record type. Please specify either 'highest' or 'lowest'.")
             return
 
         record = await self.config.get_attr(record_type)()
