@@ -134,6 +134,9 @@ class HowCracked(commands.Cog):
 
         # Send the embed
         await ctx.send(embed=embed)
+     
+    def is_owner(ctx):
+        return ctx.bot.is_owner(ctx.author) or (ctx.guild is not None and ctx.guild.owner_id == ctx.author.id)
         
     @commands.command()
     @commands.check(is_owner)
