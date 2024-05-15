@@ -21,7 +21,11 @@ class HowCracked(commands.Cog):
         }
         self.config.register_global(**default_global)
 
+    def is_owner(ctx):
+        return ctx.bot.is_owner(ctx.author) or (ctx.guild is not None and ctx.guild.owner_id == ctx.author.id)
+
     @commands.command()
+    @commands.check(is_owner)
     @commands.cooldown(1, 86400, commands.BucketType.user)  # 86400 seconds = 1 day
     async def howcracked(self, ctx, user: User = None):
         """
@@ -156,16 +160,16 @@ class HowCracked(commands.Cog):
         embed.description = f"**{record['user']}** holds the record for the **{record_type}** cracked percentage with *{record['percentage']:.2f}%* 🔥 for `{days_since_record}` days ⌛"
         await ctx.send(embed=embed)
         
+        def is_owner(ctx):
+            return ctx.bot.is_owner(ctx.author) or (ctx.guild is not None and ctx.guild.owner_id == ctx.author.id)
+        
         @commands.command()
-        @commands.is_owner()
+        @commands.check(is_owner)
         async def clearrecords(self, ctx):
             """
             Clear the highest and lowest cracked records.
             Only the bot owner or the server owner can use this command.
             """
-            if ctx.guild is not None and ctx.guild.owner_id != ctx.author.id:
-                await ctx.send("Only the server owner can use this command.")
-                return
 
             await self.config.highest.set({"user": None, "percentage": 0, "time": None})
             await self.config.lowest.set({"user": None, "percentage": 100, "time": None})
