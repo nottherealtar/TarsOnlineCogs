@@ -140,6 +140,25 @@ class HowCracked(commands.Cog):
         await ctx.send(embed=embed)
         
     @commands.command()
+    @commands.check(is_owner)
+    async def clearrecords(self, ctx):
+        """
+        Clear the highest and lowest cracked records.
+        Only the bot owner or the server owner can use this command.
+        """
+        await self.config.highest.set({"user": None, "percentage": 0, "time": None})
+        await self.config.lowest.set({"user": None, "percentage": 100, "time": None})
+        await ctx.send("Cracked records have been cleared.")
+
+    @commands.Cog.listener()
+    async def on_command_error(self, ctx, error):
+        if isinstance(error, commands.CheckFailure):
+            await ctx.send("You do not have the necessary permissions to run this command.")    
+    
+    # Record command to display the highest or lowest cracked record
+    
+        
+    @commands.command()
     async def record(self, ctx, record_type: str):
         if record_type not in ["highest", "lowest"]:
             await ctx.send("Invalid record type. Please specify either 'highest' or 'lowest'.")
@@ -162,18 +181,6 @@ class HowCracked(commands.Cog):
         
         def is_owner(ctx):
             return ctx.bot.is_owner(ctx.author) or (ctx.guild is not None and ctx.guild.owner_id == ctx.author.id)
-        
-        @commands.command()
-        @commands.check(is_owner)
-        async def clearrecords(self, ctx):
-            """
-            Clear the highest and lowest cracked records.
-            Only the bot owner or the server owner can use this command.
-            """
-
-            await self.config.highest.set({"user": None, "percentage": 0, "time": None})
-            await self.config.lowest.set({"user": None, "percentage": 100, "time": None})
-            await ctx.send("Cracked records have been cleared.")
 
 # Required to make the cog load
 def setup(bot):
