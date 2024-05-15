@@ -21,11 +21,7 @@ class HowCracked(commands.Cog):
         }
         self.config.register_global(**default_global)
 
-    def is_owner(ctx):
-        return ctx.bot.is_owner(ctx.author) or (ctx.guild is not None and ctx.guild.owner_id == ctx.author.id)
-
     @commands.command()
-    @commands.check(is_owner)
     @commands.cooldown(1, 86400, commands.BucketType.user)  # 86400 seconds = 1 day
     async def howcracked(self, ctx, user: User = None):
         """
