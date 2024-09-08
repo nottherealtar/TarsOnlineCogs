@@ -68,7 +68,15 @@ class ServerAssistant(commands.Cog):
             "Red", "Green", "Blue", "Yellow", "Purple", "Orange", "Pink", "Teal", "Cyan",
             "White", "Black", "Brown", "Gray", "Lime", "Indigo", "Violet", "Gold", "Silver"
         ]
-        options = [discord.SelectOption(label=color) for color in colors]
+        await self.paginate_colors(ctx, colors)
+
+    async def paginate_colors(self, ctx, colors, start_index=0):
+        """Paginate through color options."""
+        page_size = 25
+        end_index = min(start_index + page_size, len(colors))
+        current_colors = colors[start_index:end_index]
+
+        options = [{"label": color} for color in current_colors]
 
         async def color_select_callback(view, interaction, selected_values):
             selected_color = selected_values[0]
@@ -85,7 +93,27 @@ class ServerAssistant(commands.Cog):
             function=color_select_callback,
             members=[ctx.author.id]
         )
+
+        if start_index > 0:
+            view.add_item(discord.ui.Button(label="Previous", style=discord.ButtonStyle.primary, custom_id="previous"))
+        if end_index < len(colors):
+            view.add_item(discord.ui.Button(label="Next", style=discord.ButtonStyle.primary, custom_id="next"))
+
         await ctx.send("Select a color for your role:", view=view)
+
+        def check(interaction):
+            return interaction.user.id == ctx.author.id and interaction.message.id == message.id
+
+        try:
+            interaction = await self.bot.wait_for("interaction", check=check, timeout=60)
+            if interaction.data["custom_id"] == "next" and end_index < len(colors):
+                await interaction.response.defer()
+                await self.paginate_colors(ctx, colors, start_index=end_index)
+            elif interaction.data["custom_id"] == "previous" and start_index > 0:
+                await interaction.response.defer()
+                await self.paginate_colors(ctx, colors, start_index=start_index - page_size)
+        except asyncio.TimeoutError:
+            pass
 
     @serverassistant.command(name="channelmap")
     async def channel_map(self, ctx):
