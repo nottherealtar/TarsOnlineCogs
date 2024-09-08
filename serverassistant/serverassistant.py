@@ -1,7 +1,7 @@
 from redbot.core import commands, Config
 import discord
-import asyncio
 from Star_Utils import Dropdown
+import asyncio
 
 class ServerAssistant(commands.Cog):
     """A cog for organizing your Discord server."""
@@ -83,6 +83,12 @@ class ServerAssistant(commands.Cog):
             selected_color = selected_values[0]
             role = discord.utils.get(ctx.guild.roles, name=selected_color)
             if role:
+                # Remove any existing color roles
+                for color in colors:
+                    existing_role = discord.utils.get(ctx.author.roles, name=color)
+                    if existing_role:
+                        await ctx.author.remove_roles(existing_role)
+                # Add the new color role
                 await ctx.author.add_roles(role)
                 await interaction.response.send_message(f"You have been given the `{selected_color}` role.", ephemeral=True)
             else:
@@ -100,7 +106,7 @@ class ServerAssistant(commands.Cog):
         if end_index < len(colors):
             view.add_item(discord.ui.Button(label="Next", style=discord.ButtonStyle.primary, custom_id="next"))
 
-        await ctx.send("Select a color for your role:", view=view)
+        message = await ctx.send("Select a color for your role:", view=view)
 
         def check(interaction):
             return interaction.user.id == ctx.author.id and interaction.message.id == message.id
@@ -133,11 +139,10 @@ class ServerAssistant(commands.Cog):
             elif isinstance(channel, discord.VoiceChannel) and channel.category is None:
                 tree_string += f" {channel.name}\n"
 
-        # Ensure the message does not exceed Discord's max message length (2000 characters)
+        # Split the message if it exceeds Discord's max message length (2000 characters)
         if len(tree_string) > 2000:
-            await ctx.send("The server structure is too large to display in one message. Consider breaking it down.")
+            chunks = [tree_string[i:i+1990] for i in range(0, len(tree_string), 1990)]
+            for chunk in chunks:
+                await ctx.send(f"```{chunk}```")
         else:
             await ctx.send(f"```{tree_string}```")
-
-def setup(bot):
-    bot.add_cog(ServerAssistant(bot))
