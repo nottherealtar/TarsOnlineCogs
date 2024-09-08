@@ -8,15 +8,9 @@ class ServerAssistant(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.group()
+    @commands.group(invoke_without_command=True)
     async def serverassistant(self, ctx):
         """Base command for the ServerAssistant cog."""
-        if ctx.invoked_subcommand is None:
-            await ctx.send_help(str(ctx.command))
-
-    @serverassistant.command(name="help")
-    async def _help(self, ctx):
-        """Displays the help diagram for ServerAssistant commands."""
         help_message = discord.Embed(
             title="ServerAssistant Commands",
             description="Helpful commands for managing your Discord server.",
