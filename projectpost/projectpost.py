@@ -57,14 +57,15 @@ class ProjectPost(commands.Cog):
 
         messages_to_delete.extend([question3, project_url_message])
 
-        # Create the timestamp for the current time
-        timestamp = datetime.now()
+        # Create the timestamp for the current time in Discord format
+        timestamp = int(datetime.now().timestamp())
+        discord_timestamp = f"<t:{timestamp}>"
 
         # Create the nicely formatted embed
         embed = Embed(title=project_title.content, url=project_url_message.content)
         embed.description = f"**Author:** {author_name.content}"
         embed.set_thumbnail(url=github_thumbnail)
-        embed.set_footer(text=f"Posted at {timestamp}")
+        embed.set_footer(text=f"Posted at {discord_timestamp}")
 
         # Delete all messages used in the process
         await delete_messages(messages_to_delete)
