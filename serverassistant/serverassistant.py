@@ -33,7 +33,7 @@ class ServerAssistant(commands.Cog):
             "Orange": discord.Color.orange(),
             "Pink": discord.Color.magenta(),
             "Teal": discord.Color.teal(),
-            "Cyan": discord.Color.cyan(),
+            "Cyan": discord.Color.from_rgb(0, 255, 255),
             "White": discord.Color.from_rgb(255, 255, 255),
             "Black": discord.Color.from_rgb(0, 0, 0),
             "Brown": discord.Color.from_rgb(139, 69, 19),
@@ -45,12 +45,21 @@ class ServerAssistant(commands.Cog):
             "Silver": discord.Color.from_rgb(192, 192, 192),
             # Add more colors as needed
         }
+
+        created_roles = []
+        skipped_roles = []
+
         for color_name, color in colors.items():
             if discord.utils.get(ctx.guild.roles, name=color_name):
-                await ctx.send(f"Role `{color_name}` already exists.")
+                skipped_roles.append(color_name)
             else:
                 await ctx.guild.create_role(name=color_name, color=color)
-                await ctx.send(f"Role `{color_name}` created.")
+                created_roles.append(color_name)
+
+        if created_roles:
+            await ctx.send(f"Created roles: {', '.join(created_roles)}")
+        if skipped_roles:
+            await ctx.send(f"Skipped existing roles: {', '.join(skipped_roles)}")
 
     @serverassistant.command(name="selectcolorrole")
     async def select_color_role(self, ctx):
