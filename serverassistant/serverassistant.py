@@ -1,5 +1,6 @@
 from redbot.core import commands, Config
 import discord
+import asyncio
 from Star_Utils import Dropdown
 
 class ServerAssistant(commands.Cog):
