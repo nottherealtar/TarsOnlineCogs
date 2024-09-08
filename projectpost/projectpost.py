@@ -59,7 +59,7 @@ class ProjectPost(commands.Cog):
 
         # Create the timestamp for the current time in Discord format
         timestamp = int(datetime.now().timestamp())
-        discord_timestamp = f"<t:{timestamp}>"
+        discord_timestamp = f"<t:{timestamp}:F>"
 
         # Create the nicely formatted embed
         embed = Embed(title=project_title.content, url=project_url_message.content)
