@@ -28,8 +28,8 @@ This is a collection of cogs that I have made over time, some of them are just f
 > ## Open Source and available to the public, please credit where due.
 
 > # Installation:
-1. Download the latest releases from [here](https://github.com/TheRealDuckMan/TarsOnlineCogs/)
-    By installing them via the downloader/cog-manager cog assuming you have installed that as required.
+1. Download the latest releases from [here](https://github.com/nottherealtar/TarsOnlineCogs/)
+    Installing them via the downloader/cog-manager cog assuming you have installed that as required.
     - `[p]repo add TarsOnlineCafe https://github.com/nottherealtar/TarsOnlineCogs`
     - `[p]cog install TarsOnlineCogs <cog>`
     - `[p]load <cog>`
