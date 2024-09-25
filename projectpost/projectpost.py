@@ -57,8 +57,8 @@ class ProjectPost(commands.Cog):
 
         messages_to_delete.extend([question3, project_url_message])
 
-        # Create the timestamp for the current time
-        timestamp = datetime.now()
+        # Create the timestamp for the current time in a human-readable format
+        timestamp = datetime.now().strftime("%A, %B %d, %Y %I:%M %p")
 
         # Create the nicely formatted embed
         embed = Embed(title=project_title.content, url=project_url_message.content)

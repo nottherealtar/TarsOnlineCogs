@@ -36,6 +36,10 @@ class CoffeeStatus(commands.Cog):
         }
         self.config.register_global(**default_global)
 
+    def random_activity(self, activities):
+        """Selects a random activity from the list."""
+        return random.choice(activities)
+
     def cog_unload(self):
         self.presence_task.cancel()
 
