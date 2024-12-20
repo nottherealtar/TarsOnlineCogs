@@ -2,7 +2,7 @@ import os
 from redbot.core import commands, Config
 from discord import Embed, User, File
 import random
-from datetime import datetime
+from datetime import datetime, timedelta
 from .icon_generator import generate_icon, clear_icon_cache
 
 class HowCracked(commands.Cog):
@@ -12,6 +12,7 @@ class HowCracked(commands.Cog):
         default_global = {
             "highest": {"user": None, "percentage": 0, "time": None},
             "lowest": {"user": None, "percentage": 100, "time": None},
+            "cooldowns": {}
         }
         self.config.register_global(**default_global)
 
@@ -21,12 +22,34 @@ class HowCracked(commands.Cog):
         """
         return random.uniform(0, 100)
 
-    @commands.command()
-    @commands.cooldown(1, 86400, commands.BucketType.user)  # 86400 seconds = 1 day
-    async def howcracked(self, ctx, user: User = None):
+    async def check_cooldown(self, user_id):
+        cooldowns = await self.config.cooldowns()
+        if str(user_id) in cooldowns:
+            last_used = datetime.fromtimestamp(cooldowns[str(user_id)])
+            if datetime.utcnow() - last_used < timedelta(hours=12):
+                return False
+        return True
+
+    async def update_cooldown(self, user_id):
+        cooldowns = await self.config.cooldowns()
+        cooldowns[str(user_id)] = datetime.utcnow().timestamp()
+        await self.config.cooldowns.set(cooldowns)
+
+    @commands.group()
+    async def howcracked(self, ctx):
+        """Commands related to how cracked you are."""
+        if ctx.invoked_subcommand is None:
+            await ctx.send_help(ctx.command)
+
+    @howcracked.command(name="rate")
+    async def rate(self, ctx, user: User = None):
         """
         Rate the cracked level of a user or yourself.
         """
+        if not await self.check_cooldown(ctx.author.id):
+            await ctx.send("You can only use this command once every 12 hours.")
+            return
+
         # Define cool power levels and emojis
         cool_power_levels = [
             "Ultra Mega Super Cracked",
@@ -181,7 +204,10 @@ class HowCracked(commands.Cog):
         # Send the embed with the icon
         await ctx.send(embed=embed, file=File(icon_path))
 
-    @commands.command()
+        # Update the cooldown
+        await self.update_cooldown(ctx.author.id)
+
+    @howcracked.command(name="generate_icons")
     @commands.is_owner()
     async def generate_icons(self, ctx):
         """
@@ -197,7 +223,7 @@ class HowCracked(commands.Cog):
             generate_icon(level)
         await ctx.send("Icons generated and cached successfully.")
 
-    @commands.command()
+    @howcracked.command(name="regenerate_icons")
     @commands.is_owner()
     async def regenerate_icons(self, ctx):
         """
@@ -214,11 +240,8 @@ class HowCracked(commands.Cog):
             generate_icon(level)
         await ctx.send("Icons regenerated and cached successfully.")
 
-    def is_owner(ctx):
-        return ctx.bot.is_owner(ctx.author) or (ctx.guild is not None and ctx.guild.owner_id == ctx.author.id)
-
-    @commands.command()
-    @commands.check(is_owner)
+    @howcracked.command(name="clearrecords")
+    @commands.is_owner()
     async def clearrecords(self, ctx):
         """
         Clear the highest and lowest cracked records.
@@ -228,13 +251,11 @@ class HowCracked(commands.Cog):
         await self.config.lowest.set({"user": None, "percentage": 100, "time": None})
         await ctx.send("Cracked records have been cleared.")
 
-    @commands.Cog.listener()
-    async def on_command_error(self, ctx, error):
-        if isinstance(error, commands.CheckFailure):
-            await ctx.send("You do not have the necessary permissions to run this command.")    
-
-    @commands.command()
+    @howcracked.command(name="record")
     async def record(self, ctx, record_type: str):
+        """
+        Display the highest or lowest cracked record.
+        """
         if record_type not in ["highest", "lowest"]:
             await ctx.send("Invalid record type. Please specify either 'highest' or 'lowest'.")
             return
@@ -250,6 +271,11 @@ class HowCracked(commands.Cog):
         embed = Embed(title=f"{record_type.capitalize()} Cracked Record 😎", color=0x00ff00)
         embed.description = f"**{record['user']}** holds the record for the **{record_type}** cracked percentage with *{record['percentage']:.2f}%* 🔥 for `{days_since_record}` days ⌛"
         await ctx.send(embed=embed)
+
+    @commands.Cog.listener()
+    async def on_command_error(self, ctx, error):
+        if isinstance(error, commands.CheckFailure):
+            await ctx.send("You do not have the necessary permissions to run this command.")
 
 # Required to make the cog load
 def setup(bot):
