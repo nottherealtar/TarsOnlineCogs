@@ -10,7 +10,7 @@ def generate_icon(level):
     """
     try:
         # Define icon size and colors
-        size = (100, 100)
+        size = (200, 200)
         background_color = (255, 255, 255)
         text_color = (0, 0, 0)
 
@@ -24,13 +24,35 @@ def generate_icon(level):
         except IOError:
             raise Exception("Font file not found.")
 
-        # Draw text
+        # Define fighting components
+        components = {
+            "On-Crack": "🔥",
+            "Butt-Crack-ed": "👊",
+            "Un-Cracked": "🛡️",
+            "Not So Cracked": "⚔️",
+            "Kinda Cracked": "✨",
+            "Barely Cracked": "💥",
+            "Slightly Cracked": "🔥",
+            "Moderately Cracked": "👊",
+            "Highly Cracked": "🛡️",
+            "Extremely Cracked": "⚔️",
+            "Insanely Cracked": "✨",
+            "Godly Cracked": "💥",
+            "Legendary Cracked": "🔥",
+            "Mythical Cracked": "👊",
+            "Ultimate Cracked": "🛡️",
+            "Ultra Mega Super Cracked": "⚔️",
+        }
+
+        # Draw text and component
         text = level[:2]  # Use first 2 letters of the level for simplicity
-        text_bbox = draw.textbbox((0, 0), text, font=font)
+        component = components.get(level, "✨")
+        combined_text = f"{text}\n{component}"
+        text_bbox = draw.textbbox((0, 0), combined_text, font=font)
         text_width = text_bbox[2] - text_bbox[0]
         text_height = text_bbox[3] - text_bbox[1]
         text_position = ((size[0] - text_width) / 2, (size[1] - text_height) / 2)
-        draw.text(text_position, text, fill=text_color, font=font)
+        draw.text(text_position, combined_text, fill=text_color, font=font)
 
         # Save the image to a temporary file
         temp_dir = "icons_cache"

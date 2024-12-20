@@ -1,4 +1,3 @@
-import os
 from redbot.core import commands, Config
 from discord import Embed, User, File
 import random
