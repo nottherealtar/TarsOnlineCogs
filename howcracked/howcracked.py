@@ -45,7 +45,7 @@ class HowCracked(commands.Cog):
         """
         Rate the cracked level of a user or yourself.
         """
-        if not await self.check_cooldown(ctx.author.id):
+        if not await self.check_cooldown(ctx.author.id) and not await self.bot.is_owner(ctx.author):
             await ctx.send("You can only use this command once every 12 hours.")
             return
 
@@ -204,7 +204,8 @@ class HowCracked(commands.Cog):
         await ctx.send(embed=embed, file=File(icon_path))
 
         # Update the cooldown
-        await self.update_cooldown(ctx.author.id)
+        if not await self.bot.is_owner(ctx.author):
+            await self.update_cooldown(ctx.author.id)
 
     @howcracked.command(name="generate_icons")
     @commands.is_owner()
