@@ -2,6 +2,7 @@ from redbot.core import commands, Config
 from discord import Embed, User, File
 import random
 from datetime import datetime, timedelta
+import os
 from .icon_generator import generate_icon, clear_icon_cache
 
 class HowCracked(commands.Cog):
