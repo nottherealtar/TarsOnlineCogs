@@ -1,3 +1,4 @@
+import os
 from redbot.core import commands, Config
 from discord import Embed, User, File
 import random
@@ -167,6 +168,9 @@ class HowCracked(commands.Cog):
 
         # Generate or retrieve the icon
         icon_path = generate_icon(power_level)
+        if not icon_path:
+            await ctx.send("Failed to generate icon.")
+            return
 
         # Build the embed
         embed = Embed(title=f"How Cracked is {target_user.name}?", color=0x00ff00)
