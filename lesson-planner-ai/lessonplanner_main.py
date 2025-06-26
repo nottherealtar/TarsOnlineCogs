@@ -20,7 +20,8 @@ class LessonPlannerCog(commands.Cog):
         self.config = Config.get_conf(self, identifier=1234567890, force_registration=True)
         
         default_global = {
-            "n8n_url": "https://0d09-102-135-142-207.ngrok-free.app/lesson-plan-pdf"  # Default ngrok URL
+            "n8n_url": "https://0d09-102-135-142-207.ngrok-free.app/lesson-plan-pdf",  # Default ngrok URL
+            "allowed_users": [985226198508511302, 552199165153902604]  # Authorized user IDs
         }
         self.config.register_global(**default_global)
         self.config.register_guild(plans={})  # Store plans per guild
@@ -172,6 +173,12 @@ class LessonPlannerCog(commands.Cog):
     @commands.cooldown(2, 60, commands.BucketType.user)  # Limit to 2 uses per minute
     async def plan(self, ctx: commands.Context, *, text: str):
         """Create a lesson plan (e.g., !plan Learn 3D Animation 2 months)"""
+        # Check if user is authorized
+        allowed_users = await self.config.allowed_users()
+        if ctx.author.id not in allowed_users:
+            await ctx.send("❌ You are not authorized to use this command.")
+            return
+            
         n8n_url = await self.config.n8n_url()
         if not n8n_url:
             await ctx.send("❌ Lesson planner is not configured. Please contact the bot owner.")
@@ -209,6 +216,59 @@ class LessonPlannerCog(commands.Cog):
         elif isinstance(error, commands.MissingRequiredArgument):
             await ctx.send("Usage: !plan <topic> <duration e.g., 2 months>")
 
+    @lessonplanset.command(name="users")
+    async def manage_users(self, ctx, action=None, user_id=None):
+        """Manage authorized users for the lesson planner.
+        
+        Actions: add, remove, list
+        Example: [p]lessonplanset users add 123456789012345678
+        """
+        if action is None:
+            await ctx.send("Available actions: `add`, `remove`, `list`\nExample: `[p]lessonplanset users list`")
+            return
+            
+        allowed_users = await self.config.allowed_users()
+        
+        if action.lower() == "list":
+            if allowed_users:
+                user_list = "\n".join([f"• <@{user_id}> ({user_id})" for user_id in allowed_users])
+                await ctx.send(f"**Authorized Users:**\n{user_list}")
+            else:
+                await ctx.send("No authorized users configured.")
+                
+        elif action.lower() == "add":
+            if user_id is None:
+                await ctx.send("Please provide a user ID: `[p]lessonplanset users add <user_id>`")
+                return
+            try:
+                user_id = int(user_id)
+            except ValueError:
+                await ctx.send("Invalid user ID format. Please provide a numeric Discord user ID.")
+                return
+            if user_id not in allowed_users:
+                allowed_users.append(user_id)
+                await self.config.allowed_users.set(allowed_users)
+                await ctx.send(f"✅ Added <@{user_id}> to authorized users.")
+            else:
+                await ctx.send(f"<@{user_id}> is already authorized.")
+                
+        elif action.lower() == "remove":
+            if user_id is None:
+                await ctx.send("Please provide a user ID: `[p]lessonplanset users remove <user_id>`")
+                return
+            try:
+                user_id = int(user_id)
+            except ValueError:
+                await ctx.send("Invalid user ID format. Please provide a numeric Discord user ID.")
+                return
+            if user_id in allowed_users:
+                allowed_users.remove(user_id)
+                await self.config.allowed_users.set(allowed_users)
+                await ctx.send(f"✅ Removed <@{user_id}> from authorized users.")
+            else:
+                await ctx.send(f"<@{user_id}> is not in the authorized users list.")
+        else:
+            await ctx.send("Invalid action. Use: `add`, `remove`, or `list`")
 
 async def setup(bot):
     await bot.add_cog(LessonPlannerCog(bot))
