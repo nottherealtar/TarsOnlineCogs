@@ -3,7 +3,7 @@
         "nottherealtar"
     ],
     "install_msg": "⚠️ **Ready to use with ngrok!** Default URL configured. Use `[p]lessonplanset ngrok <your-ngrok-domain>` to update when needed. Use `[p]lessonplanset test` to verify connection. **Note**: Only authorized users can generate lesson plans.",
-    "name": "LessonPlannerCog",
+    "name": "lesson-planner-ai",
     "short": "AI-powered lesson plan generator via n8n workflow with user restrictions.",
     "description": "Generate university-level lesson plans as PDFs using AI through an n8n workflow integration. Features secure configuration system, user authorization, ngrok compatibility, connection testing, and rate limiting. Perfect for educators and students planning their learning journey.",
     "min_bot_version": "3.5.0",
