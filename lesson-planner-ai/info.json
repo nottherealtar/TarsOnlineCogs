@@ -1,0 +1,20 @@
+{
+    "author": [
+        "nottherealtar"
+    ],
+    "install_msg": "⚠️ **Configuration Required**: Use `[p]lessonplanset url <webhook-url>` to configure your n8n webhook before use. See README for security guidelines.",
+    "name": "LessonPlannerCog",
+    "short": "AI-powered lesson plan generator via n8n workflow.",
+    "description": "Generate university-level lesson plans as PDFs using AI through an n8n workflow integration. Includes secure configuration system for webhook URLs and rate limiting. Perfect for educators and students planning their learning journey.",
+    "min_bot_version": "3.5.0",
+    "tags": [
+        "education",
+        "ai",
+        "planning",
+        "pdf",
+        "learning",
+        "security"
+    ],
+    "end_user_data_statement": "This cog stores lesson plans per guild and sends user IDs to the configured n8n webhook for plan generation. Webhook URLs are stored securely in bot configuration.",
+    "type": "COG"
+}
