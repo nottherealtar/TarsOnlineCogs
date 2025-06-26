@@ -1,4 +1,4 @@
-from .lessonplanner_main import LessonPlannerCog
+from .lessonplannercog import LessonPlannerCog
 
 async def setup(bot):
     await bot.add_cog(LessonPlannerCog(bot))
