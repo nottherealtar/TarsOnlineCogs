@@ -1,0 +1,118 @@
+export default defineComponent({
+  name: "Extract Discord Comment Data",
+  description: "Extract comment data from Discord webhook payload for video generation",
+  type: "action",
+  props: {
+    webhookPayload: {
+      type: "object",
+      label: "Discord Webhook Payload",
+      description: "The incoming webhook request payload from Discord bot containing message/comment data"
+    }
+  },
+  async run({ $ }) {
+    const payload = this.webhookPayload;
+    
+    // Initialize extracted data structure
+    let extractedData = {
+      commentText: "",
+      author: {
+        username: "",
+        displayName: "",
+        id: "",
+        avatar: ""
+      },
+      message: {
+        id: "",
+        channelId: "",
+        guildId: "",
+        timestamp: ""
+      },
+      attachments: [],
+      embeds: [],
+      mentions: []
+    };
+    
+    // Extract comment text from various possible Discord payload structures
+    if (payload.content) {
+      extractedData.commentText = payload.content;
+    } else if (payload.message?.content) {
+      extractedData.commentText = payload.message.content;
+    } else if (payload.data?.content) {
+      extractedData.commentText = payload.data.content;
+    } else if (payload.d?.content) {
+      extractedData.commentText = payload.d.content;
+    }
+    
+    // Extract author information
+    const authorSource = payload.author || payload.message?.author || payload.data?.author || payload.d?.author;
+    if (authorSource) {
+      extractedData.author = {
+        username: authorSource.username || "",
+        displayName: authorSource.global_name || authorSource.display_name || authorSource.username || "",
+        id: authorSource.id || "",
+        avatar: authorSource.avatar ? `https://cdn.discordapp.com/avatars/${authorSource.id}/${authorSource.avatar}.png` : ""
+      };
+    }
+    
+    // Extract message metadata
+    const messageSource = payload.message || payload.data || payload.d || payload;
+    extractedData.message = {
+      id: messageSource.id || "",
+      channelId: messageSource.channel_id || "",
+      guildId: messageSource.guild_id || "",
+      timestamp: messageSource.timestamp || ""
+    };
+    
+    // Extract attachments (images, videos, files)
+    if (messageSource.attachments && Array.isArray(messageSource.attachments)) {
+      extractedData.attachments = messageSource.attachments.map(attachment => ({
+        id: attachment.id,
+        filename: attachment.filename,
+        url: attachment.url,
+        proxyUrl: attachment.proxy_url,
+        size: attachment.size,
+        contentType: attachment.content_type
+      }));
+    }
+    
+    // Extract embeds
+    if (messageSource.embeds && Array.isArray(messageSource.embeds)) {
+      extractedData.embeds = messageSource.embeds.map(embed => ({
+        title: embed.title,
+        description: embed.description,
+        url: embed.url,
+        image: embed.image?.url,
+        thumbnail: embed.thumbnail?.url
+      }));
+    }
+    
+    // Extract mentions
+    if (messageSource.mentions && Array.isArray(messageSource.mentions)) {
+      extractedData.mentions = messageSource.mentions.map(mention => ({
+        id: mention.id,
+        username: mention.username,
+        displayName: mention.global_name || mention.username
+      }));
+    }
+    
+    // Clean up comment text for video generation
+    let cleanedText = extractedData.commentText
+      .replace(/<@!?\d+>/g, '') // Remove user mentions
+      .replace(/<#\d+>/g, '') // Remove channel mentions
+      .replace(/<@&\d+>/g, '') // Remove role mentions
+      .replace(/:\w+:/g, '') // Remove custom emojis
+      .trim();
+    
+    extractedData.cleanedCommentText = cleanedText;
+    extractedData.wordCount = cleanedText.split(/\s+/).filter(word => word.length > 0).length;
+    
+    // Generate summary
+    const summary = extractedData.commentText 
+      ? `Successfully extracted comment from ${extractedData.author.displayName || extractedData.author.username || 'Unknown User'}: "${extractedData.commentText.substring(0, 100)}${extractedData.commentText.length > 100 ? '...' : ''}"`
+      : 'No comment text found in Discord webhook payload';
+    
+    $.export("$summary", summary);
+    
+    return extractedData;
+  }
+})
