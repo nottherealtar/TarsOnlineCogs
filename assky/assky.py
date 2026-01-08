@@ -21,11 +21,13 @@ class AsSky(commands.Cog):
 
     async def red_delete_data_for_user(self, **kwargs):
         """Nothing to delete."""
-        return
+        @commands.command()
+        async def assky(self, ctx):
+            """
+            Sends a random ASCII emoji from a large collection.
 
-    @commands.command()
-    async def assky(self, ctx):
-        """
+            Use this command for a fun, random ASCII face or emoticon!
+            """
         List of about 100 random ASCII emojis
         """
         # List of about 100 random ASCII emojis

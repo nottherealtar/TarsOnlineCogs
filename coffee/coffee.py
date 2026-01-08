@@ -21,7 +21,9 @@ class Coffee(commands.Cog):
     @commands.command()
     async def coffee(self, ctx, user: User = None):
         """
-        Place a coffee order for yourself or someone else.
+        Order a virtual coffee for yourself or another user!
+
+        If no user is mentioned, you get the coffee. Use `{prefix}coffee @user` to send coffee to someone else.
         """
         # Get the user to order for
         target_user = user or ctx.author

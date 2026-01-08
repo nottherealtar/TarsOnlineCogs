@@ -30,30 +30,56 @@ class CoffeeStatus(commands.Cog):
 
         default_global = {
             "botstats": True,
-            "activities": ["cchelp", "cccoffee", "ccthankyou"],
+            # Use {prefix} as a placeholder for dynamic prefix
+            "activities": ["{prefix}help", "{prefix}coffee", "{prefix}thankyou"],
             "streamer": "nottherealtar",
             "type": 0,
             "status": 0,
         }
         self.config.register_global(**default_global)
 
-    def random_activity(self, activities):
-        """Selects a random activity from the list."""
-        return random.choice(activities)
+    def random_activity(self, activities, prefix):
+        """Selects a random activity, replacing {prefix} with the current prefix."""
+        return random.choice([a.replace("{prefix}", prefix) for a in activities])
 
     def cog_unload(self):
-        self.presence_task.cancel()
+        if hasattr(self, "presence_task"):
+            self.presence_task.cancel()
+    @coffeestatus.command()
+    async def show(self, ctx):
+        """
+        Show the current CoffeeStatus configuration and settings.
+        """
+        settings = await self.config.all()
+        msg = (
+            f"Botstats: {settings['botstats']}\n"
+            f"Activities: {', '.join(settings['activities'])}\n"
+            f"Streamer: {settings['streamer']}\n"
+            f"Type: {settings['type']}\n"
+            f"Status: {settings['status']}"
+        )
+        await ctx.send(f"```\n{msg}\n```")
 
     @commands.group(autohelp=True)
     @commands.guild_only()
     @checks.is_owner()
     async def coffeestatus(self, ctx):
-        """group commands."""
+        """
+        Manage the bot's status and activity display.
+
+        Use `{prefix}coffeestatus activities`, `{prefix}coffeestatus streamer`, `{prefix}coffeestatus type`, `{prefix}coffeestatus status`, and `{prefix}coffeestatus botstats` to configure.
+        """
         pass
 
     @coffeestatus.command(name="activities")
     async def _activities(self, ctx, *activities: str):
-        """Sets custom activities for the bot."""
+        """
+        Set or show custom activities for the bot's status.
+
+        Usage: `{prefix}coffeestatus activities Activity1 Activity2 ...`
+        If no activities are given, shows the current list.
+        Use `{prefix}` as a placeholder for the bot's prefix.
+        """
         if activities == ():
             saved_activities = await self.config.activities()
             msg = (
@@ -67,7 +93,12 @@ class CoffeeStatus(commands.Cog):
 
     @coffeestatus.command(name="streamer")
     async def _streamer(self, ctx: commands.Context, *, streamer=None):
-        """Set the streamer name needed for streaming statuses."""
+        """
+        Set or show the streamer name for streaming status.
+
+        Usage: `{prefix}coffeestatus streamer <name>`
+        If no name is given, shows the current streamer.
+        """
         saved_streamer = await self.config.streamer()
         if streamer is None:
             return await ctx.send(f"Current Streamer: {saved_streamer}")
@@ -76,7 +107,9 @@ class CoffeeStatus(commands.Cog):
 
     @coffeestatus.command()
     async def botstats(self, ctx):
-        """Toggle for a bot stats status instead of random messages."""
+        """
+        Toggle between showing bot stats or custom activities as the bot's status.
+        """
         botstats = await self.config.botstats()
         await self.config.botstats.set(not botstats)
         await ctx.send(f"Botstats toggle: {not botstats}.")
@@ -84,14 +117,16 @@ class CoffeeStatus(commands.Cog):
 
     @coffeestatus.command(name="type")
     async def _coffeestatus_type(self, ctx, status_type: int):
-        """Define the coffeestatus game type.
+        """
+        Set the activity type for the bot's status.
 
         Type list:
         0 = Playing
         1 = Streaming
         2 = Listening
         3 = Watching
-        5 = Competing"""
+        5 = Competing
+        """
         if status_type in [0, 1, 2, 3, 5]:
             rnd_type = {0: "playing", 1: "streaming", 2: "listening", 3: "watching", 5: "competing"}
             await self.config.type.set(status_type)
@@ -102,19 +137,18 @@ class CoffeeStatus(commands.Cog):
                 f"Status activity type must be 0, 1, 2, 3, or 5. "
                 f"See `{ctx.prefix}help coffeestatus type` for more information."
             )
-                f"Status activity type must be between 0 and 3 or 5. "
-                f"See `{ctx.prefix}help rndstatus type` for more information."
-            )
 
     @coffeestatus.command()
     async def status(self, ctx, status: int):
-        """Define the rndstatus presence status.
+        """
+        Set the bot's presence status (online, idle, DND, invisible).
 
         Status list:
         0 = Online
         1 = Idle
         2 = DND
-        3 = Invisible"""
+        3 = Invisible
+        """
         if 0 <= status <= 3:
             rnd_status = {0: "online", 1: "idle", 2: "DND", 3: "invisible"}
             await self.config.status.set(status)
@@ -138,18 +172,12 @@ class CoffeeStatus(commands.Cog):
 
     async def presence_updater(self):
         cog_settings = await self.config.all()
-        guilds = self.bot.guilds
-        try:
-            guild = next(g for g in guilds if not g.unavailable)
-        except StopIteration:
-            return
+        prefix = (await self.bot.get_valid_prefixes())[0] if hasattr(self.bot, 'get_valid_prefixes') else "cs"
         botstats = cog_settings["botstats"]
         streamer = cog_settings["streamer"]
         _type = cog_settings["type"]
         _status = cog_settings["status"]
-
         url = f"https://www.twitch.tv/{streamer}"
-
         if _status == 0:
             status = discord.Status.online
         elif _status == 1:
@@ -158,12 +186,11 @@ class CoffeeStatus(commands.Cog):
             status = discord.Status.dnd
         elif _status == 3:
             status = discord.Status.offline
-
         if botstats:
             me = self.bot.user
             total_users = len(self.bot.users)
             servers = str(len(self.bot.guilds))
-            botstatus = f"☕cchelp | 🧑 {total_users} | 🌐 {servers}🌵"
+            botstatus = f"☕{prefix}help | 🧑 {total_users} | 🌐 {servers}🌵"
             if _type == 1:
                 await self.bot.change_presence(activity=discord.Streaming(name=botstatus, url=url))
             else:
@@ -171,7 +198,7 @@ class CoffeeStatus(commands.Cog):
         else:
             activities = cog_settings["activities"]
             if len(activities) > 0:
-                new_activity = self.random_activity(activities)
+                new_activity = self.random_activity(activities, prefix)
                 if _type == 1:
                     await self.bot.change_presence(activity=discord.Streaming(name=new_activity, url=url))
                 else:

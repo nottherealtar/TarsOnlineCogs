@@ -43,12 +43,19 @@ class CafeWelcome(commands.Cog):
     @commands.guild_only()
     @commands.group()
     async def cwset(self, ctx: commands.Context):
-        """Cafe Welcome Settings."""
+        """
+        Configure CafeWelcome settings for your server.
+
+        Use `{prefix}cwset channel` to set the welcome channel.
+        Use `{prefix}cwset show` to display the current welcome channel.
+        """
         pass
 
     @cwset.command()
     async def show(self, ctx: commands.Context):
-        """Show the current welcome channel."""
+        """
+        Show the currently configured welcome channel for new member greetings.
+        """
         welcome_channel = await self.config.guild(ctx.guild).welcome_channel()
         welcome_channel_obj = ctx.guild.get_channel(welcome_channel)
         channel_name = "No channel." if not welcome_channel_obj else welcome_channel_obj.mention
@@ -60,7 +67,11 @@ class CafeWelcome(commands.Cog):
         ctx: commands.Context,
         channel: Union[discord.TextChannel, discord.VoiceChannel, discord.StageChannel, discord.Thread] = None,
     ):
-        """Set a current welcome channel."""
+        """
+        Set the channel where welcome images will be sent for new members.
+
+        If no channel is provided, uses the current channel.
+        """
         if not channel:
             channel = ctx.channel
         if not channel.permissions_for(ctx.me).read_messages:
@@ -76,7 +87,11 @@ class CafeWelcome(commands.Cog):
     @checks.is_owner()
     @cwset.command()
     async def join(self, ctx, member: discord.Member):
-        """[Owner] Test creating the join message."""
+        """
+        [Bot Owner Only] Test the welcome image for a specific member.
+
+        This command sends a sample welcome image for the given member to the configured welcome channel.
+        """
         await ctx.typing()
         welcome_channel = await self.config.guild(member.guild).welcome_channel()
         if welcome_channel:
