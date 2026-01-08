@@ -40,11 +40,32 @@ class CoffeeStatus(commands.Cog):
 
     def random_activity(self, activities, prefix):
         """Selects a random activity, replacing {prefix} with the current prefix."""
+        import random  # Ensure random is always available
         return random.choice([a.replace("{prefix}", prefix) for a in activities])
 
     def cog_unload(self):
         if hasattr(self, "presence_task"):
             self.presence_task.cancel()
+
+    @commands.group(autohelp=True)
+    @commands.guild_only()
+    @checks.is_owner()
+    async def coffeestatus(self, ctx):
+        """
+        Manage the bot's status and activity display.
+
+        Use `{prefix}coffeestatus activities`, `{prefix}coffeestatus streamer`, `{prefix}coffeestatus type`, `{prefix}coffeestatus status`, and `{prefix}coffeestatus botstats` to configure.
+        """
+        pass
+
+    @coffeestatus.command(name="update")
+    async def manual_update(self, ctx):
+        """
+        Manually update the bot's status/activity immediately.
+        """
+        await self.presence_updater(ctx=ctx)
+        await ctx.send("Bot status/activity updated with the current prefix.")
+
     @coffeestatus.command()
     async def show(self, ctx):
         """
@@ -59,17 +80,6 @@ class CoffeeStatus(commands.Cog):
             f"Status: {settings['status']}"
         )
         await ctx.send(f"```\n{msg}\n```")
-
-    @commands.group(autohelp=True)
-    @commands.guild_only()
-    @checks.is_owner()
-    async def coffeestatus(self, ctx):
-        """
-        Manage the bot's status and activity display.
-
-        Use `{prefix}coffeestatus activities`, `{prefix}coffeestatus streamer`, `{prefix}coffeestatus type`, `{prefix}coffeestatus status`, and `{prefix}coffeestatus botstats` to configure.
-        """
-        pass
 
     @coffeestatus.command(name="activities")
     async def _activities(self, ctx, *activities: str):
@@ -170,9 +180,15 @@ class CoffeeStatus(commands.Cog):
 
             await asyncio.sleep(300)  # Assuming a default delay of 300 seconds
 
-    async def presence_updater(self):
+    async def presence_updater(self, ctx=None):
         cog_settings = await self.config.all()
-        prefix = (await self.bot.get_valid_prefixes())[0] if hasattr(self.bot, 'get_valid_prefixes') else "cs"
+        # Use ctx.prefix if available, else get from bot
+        if ctx and hasattr(ctx, 'prefix'):
+            prefix = ctx.prefix
+        elif hasattr(self.bot, 'get_valid_prefixes'):
+            prefix = (await self.bot.get_valid_prefixes())[0]
+        else:
+            prefix = "cs"
         botstats = cog_settings["botstats"]
         streamer = cog_settings["streamer"]
         _type = cog_settings["type"]
