@@ -7,9 +7,7 @@
     "short": "Lets help organize your server!",
     "description": "ServerAssistant is a cog that helps you organize your server by providing useful commands for managing channels; colourizing them in a rainbow order, generating mind maps of the channels structures etc.",
     "min_bot_version": "3.5.0",
-    "requirements": [
-        "git+https://github.com/LeDeathAmongst/Star_Utils.git"
-    ],
+    "requirements": [],
     "tags": [
         "util",
         "admin",
