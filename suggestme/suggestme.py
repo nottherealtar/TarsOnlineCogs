@@ -16,6 +16,10 @@ class SuggestMe(commands.Cog):
         self.bot = bot
         self.suggestion_count = 0
 
+    async def red_delete_data_for_user(self, **kwargs):
+        """Nothing to delete."""
+        return
+
     @commands.command()
     async def suggestme(self, ctx, *, suggestion: str):
         """

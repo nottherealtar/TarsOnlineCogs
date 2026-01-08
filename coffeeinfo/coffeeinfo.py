@@ -19,6 +19,10 @@ class CoffeeInfo(commands.Cog):
         self.bot = bot
         self.check_for_updates.start()
 
+    async def red_delete_data_for_user(self, **kwargs):
+        """Nothing to delete."""
+        return
+
     @commands.group()
     @checks.admin()
     async def coffeeinfo(self, ctx):
@@ -33,8 +37,12 @@ class CoffeeInfo(commands.Cog):
             guild = ctx.guild
             category = await guild.create_category(name='☕Server Stats☕')
 
-            voice_channels = [await guild.create_voice_channel(f'Humans: {guild.member_count}', category=category),
-                               await guild.create_voice_channel(f'Bots: {sum(member.bot for member in guild.members)}', category=category),
+            # Calculate non-bot members
+            human_count = sum(1 for member in guild.members if not member.bot)
+            bot_count = sum(1 for member in guild.members if member.bot)
+
+            voice_channels = [await guild.create_voice_channel(f'Humans: {human_count}', category=category),
+                               await guild.create_voice_channel(f'Bots: {bot_count}', category=category),
                                await guild.create_voice_channel(f'Server Boosts: {guild.premium_subscription_count}', category=category)]
 
             await ctx.send("Server stats have been set up in the voice channels under the 'Server Stats' category.")
@@ -65,11 +73,15 @@ class CoffeeInfo(commands.Cog):
             guild = ctx.guild
             category = discord.utils.get(guild.categories, name='☕Server Stats☕')
             if category:
+                # Calculate non-bot members
+                human_count = sum(1 for member in guild.members if not member.bot)
+                bot_count = sum(1 for member in guild.members if member.bot)
+                
                 for channel in category.voice_channels:
                     if channel.name.startswith('Humans:'):
-                        await channel.edit(name=f'Humans: {guild.member_count}')
+                        await channel.edit(name=f'Humans: {human_count}')
                     elif channel.name.startswith('Bots:'):
-                        await channel.edit(name=f'Bots: {sum(member.bot for member in guild.members)}')
+                        await channel.edit(name=f'Bots: {bot_count}')
                     elif channel.name.startswith('Server Boosts:'):
                         await channel.edit(name=f'Server Boosts: {guild.premium_subscription_count}')
                 await ctx.send("Server stats have been manually updated.")
@@ -84,9 +96,13 @@ class CoffeeInfo(commands.Cog):
             category = discord.utils.get(guild.categories, name='☕Server Stats☕')
             if category:
                 for channel in category.voice_channels:
+                    # Calculate non-bot members
+                    human_count = sum(1 for member in guild.members if not member.bot)
+                    bot_count = sum(1 for member in guild.members if member.bot)
+                    
                     if channel.name.startswith('Humans:'):
-                        await channel.edit(name=f'Humans: {guild.member_count}')
+                        await channel.edit(name=f'Humans: {human_count}')
                     elif channel.name.startswith('Bots:'):
-                        await channel.edit(name=f'Bots: {sum(member.bot for member in guild.members)}')
+                        await channel.edit(name=f'Bots: {bot_count}')
                     elif channel.name.startswith('Server Boosts:'):
                         await channel.edit(name=f'Server Boosts: {guild.premium_subscription_count}')

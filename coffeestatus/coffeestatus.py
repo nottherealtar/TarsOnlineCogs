@@ -10,6 +10,7 @@ import discord
 from redbot.core import Config, commands, checks
 import asyncio
 import logging
+import random
 
 log = logging.getLogger("red.nottherealtar.coffeestatus")
 
@@ -91,13 +92,16 @@ class CoffeeStatus(commands.Cog):
         2 = Listening
         3 = Watching
         5 = Competing"""
-        if 0 <= status_type <= 3 or 0 != 5:
+        if status_type in [0, 1, 2, 3, 5]:
             rnd_type = {0: "playing", 1: "streaming", 2: "listening", 3: "watching", 5: "competing"}
             await self.config.type.set(status_type)
             await self.presence_updater()
             await ctx.send(f"Rndstatus activity type set to {rnd_type[status_type]}.")
         else:
             await ctx.send(
+                f"Status activity type must be 0, 1, 2, 3, or 5. "
+                f"See `{ctx.prefix}help coffeestatus type` for more information."
+            )
                 f"Status activity type must be between 0 and 3 or 5. "
                 f"See `{ctx.prefix}help rndstatus type` for more information."
             )

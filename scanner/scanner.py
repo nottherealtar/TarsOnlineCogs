@@ -15,6 +15,10 @@ class Scanner(commands.Cog):
         self.auto_check = False  # Toggle for autoscan
         self.target_channel_id = None  # Channel ID to post results
 
+    async def red_delete_data_for_user(self, **kwargs):
+        """Nothing to delete."""
+        return
+
     def cog_unload(self):
         # Clean up tasks if needed
         pass

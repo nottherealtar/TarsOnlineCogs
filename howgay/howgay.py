@@ -27,6 +27,10 @@ class HowGay(commands.Cog):
         }
         self.emojis = ["🌈", "💖", "💜", "💙", "💚", "💛", "🧡", "❤️"]
 
+    async def red_delete_data_for_user(self, **kwargs):
+        """Nothing to delete."""
+        return
+
     def determine_power_level(self, percentage):
         for level, (min, max) in self.gay_power_levels.items():
             if min <= percentage < max:
@@ -57,7 +61,3 @@ class HowGay(commands.Cog):
             await ctx.send(embed=embed)
         except NotFound:
             await ctx.send("User not found.")
-
-# Required to make the cog load
-def setup(bot):
-    bot.add_cog(HowGay(bot))

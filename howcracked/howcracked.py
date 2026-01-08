@@ -16,6 +16,10 @@ class HowCracked(commands.Cog):
         }
         self.config.register_global(**default_global)
 
+    async def red_delete_data_for_user(self, **kwargs):
+        """Nothing to delete."""
+        return
+
     def get_cracked_percentage(self):
         """
         Generate a random cracked percentage with a controlled distribution.
@@ -277,7 +281,3 @@ class HowCracked(commands.Cog):
     async def on_command_error(self, ctx, error):
         if isinstance(error, commands.CheckFailure):
             await ctx.send("You do not have the necessary permissions to run this command.")
-
-# Required to make the cog load
-def setup(bot):
-    bot.add_cog(HowCracked(bot))

@@ -17,6 +17,10 @@ class PassGen(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
+    async def red_delete_data_for_user(self, **kwargs):
+        """Nothing to delete."""
+        return
+
     @commands.command()
     async def passgen(self, ctx, length: int = None):
         """Generates a random password of the specified length"""

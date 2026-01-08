@@ -15,6 +15,10 @@ class InfiniCount(commands.Cog):
 
         self.config.register_guild(**default_guild)
 
+    async def red_delete_data_for_user(self, **kwargs):
+        """Nothing to delete."""
+        return
+
     @commands.group()
     @commands.guild_only()
     async def infinicount(self, ctx):
@@ -82,6 +86,3 @@ class InfiniCount(commands.Cog):
                     return
 
                 await self.config.guild(message.guild).previous_number.set(number)
-
-def setup(bot):
-    bot.add_cog(InfiniCount(bot))
