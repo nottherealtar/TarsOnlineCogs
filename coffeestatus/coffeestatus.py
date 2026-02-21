@@ -40,7 +40,6 @@ class CoffeeStatus(commands.Cog):
 
     def random_activity(self, activities, prefix):
         """Selects a random activity, replacing {prefix} with the current prefix."""
-        import random  # Ensure random is always available
         return random.choice([a.replace("{prefix}", prefix) for a in activities])
 
     def cog_unload(self):
@@ -167,7 +166,7 @@ class CoffeeStatus(commands.Cog):
         else:
             await ctx.send(
                 f"Status presence type must be between 0 and 3. "
-                f"See `{ctx.prefix}help rndstatus status` for more information."
+                f"See `{ctx.prefix}help coffeestatus status` for more information."
             )
 
     async def maybe_update_presence(self):

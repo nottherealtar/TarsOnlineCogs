@@ -1,6 +1,7 @@
 import discord
 from redbot.core import commands, checks, Config
 
+
 class InfiniCount(commands.Cog):
     """Cog for creating a counting channel where only +1 increments are allowed."""
 
@@ -10,7 +11,9 @@ class InfiniCount(commands.Cog):
 
         default_guild = {
             "counting_channel_id": None,
-            "previous_number": 0
+            "previous_number": 0,
+            "last_counter": None,
+            "anticheat": False
         }
 
         self.config.register_guild(**default_guild)
@@ -19,12 +22,11 @@ class InfiniCount(commands.Cog):
         """Nothing to delete."""
         return
 
-    @commands.group()
+    @commands.group(invoke_without_command=True)
     @commands.guild_only()
     async def infinicount(self, ctx):
         """Commands for managing InfiniCount."""
-        pass
-
+        await ctx.send_help(ctx.command)
 
     async def counting_channel_exists(self, guild):
         counting_channel_id = await self.config.guild(guild).counting_channel_id()
@@ -38,14 +40,17 @@ class InfiniCount(commands.Cog):
     async def setup(self, ctx):
         """Setup or reset the InfiniCount channel."""
         guild = ctx.guild
-        # Try to find an existing channel
         channel = discord.utils.get(guild.text_channels, name="infinicount")
         if not channel:
             overwrites = {
                 guild.default_role: discord.PermissionOverwrite(send_messages=True),
                 guild.me: discord.PermissionOverwrite(send_messages=True)
             }
-            channel = await guild.create_text_channel("InfiniCount", overwrites=overwrites)
+            try:
+                channel = await guild.create_text_channel("InfiniCount", overwrites=overwrites)
+            except discord.Forbidden:
+                await ctx.send("I don't have permission to create channels.")
+                return
         await self.config.guild(guild).counting_channel_id.set(channel.id)
         await self.config.guild(guild).previous_number.set(0)
         await self.config.guild(guild).last_counter.set(None)
@@ -55,6 +60,9 @@ class InfiniCount(commands.Cog):
     @checks.admin_or_permissions(manage_channels=True)
     async def set_count(self, ctx, number: int):
         """Manually set the current count."""
+        if number < 0:
+            await ctx.send("Count must be 0 or greater.")
+            return
         await self.config.guild(ctx.guild).previous_number.set(number)
         await ctx.send(f"Count set to {number}.")
 
@@ -71,7 +79,12 @@ class InfiniCount(commands.Cog):
         channel_id = await self.config.guild(ctx.guild).counting_channel_id()
         channel = ctx.guild.get_channel(channel_id) if channel_id else None
         number = await self.config.guild(ctx.guild).previous_number()
-        await ctx.send(f"Current count: {number}\nCounting channel: {channel.mention if channel else 'Not set'}")
+        anticheat = await self.config.guild(ctx.guild).anticheat()
+        await ctx.send(
+            f"Current count: {number}\n"
+            f"Counting channel: {channel.mention if channel else 'Not set'}\n"
+            f"Anti-cheat: {'Enabled' if anticheat else 'Disabled'}"
+        )
 
     @infinicount.command(name="anticheat")
     @checks.admin_or_permissions(manage_channels=True)
@@ -79,7 +92,7 @@ class InfiniCount(commands.Cog):
         """Enable or disable anti-cheat (no double counts in a row)."""
         await self.config.guild(ctx.guild).anticheat.set(enabled)
         await ctx.send(f"Anti-cheat is now {'enabled' if enabled else 'disabled'}.")
-    
+
     @infinicount.command(name="reset")
     @checks.admin_or_permissions(manage_channels=True)
     async def reset_count(self, ctx):
@@ -87,6 +100,7 @@ class InfiniCount(commands.Cog):
         guild = ctx.guild
         if await self.counting_channel_exists(guild):
             await self.config.guild(guild).previous_number.set(0)
+            await self.config.guild(guild).last_counter.set(None)
             await ctx.send("Count has been reset to 0.")
         else:
             await ctx.send("No counting channel exists in this guild.")
@@ -100,14 +114,17 @@ class InfiniCount(commands.Cog):
             return await ctx.send("A counting channel already exists in this guild.")
 
         overwrites = {
-            guild.default_role: discord.PermissionOverwrite(send_messages=False),
+            guild.default_role: discord.PermissionOverwrite(send_messages=True),
             guild.me: discord.PermissionOverwrite(send_messages=True)
         }
 
-        counting_channel = await guild.create_text_channel("InfiniCount", overwrites=overwrites)
+        try:
+            counting_channel = await guild.create_text_channel("InfiniCount", overwrites=overwrites)
+        except discord.Forbidden:
+            await ctx.send("I don't have permission to create channels.")
+            return
         await self.config.guild(guild).counting_channel_id.set(counting_channel.id)
-        await ctx.send("Counting channel created successfully.")
-
+        await ctx.send(f"Counting channel {counting_channel.mention} created successfully.")
 
     @commands.Cog.listener()
     async def on_message(self, message):
@@ -123,38 +140,44 @@ class InfiniCount(commands.Cog):
 
         content = message.content.strip()
         if not content.isdigit():
-            await message.delete()
             try:
+                await message.delete()
                 await message.author.send(f"Your message in {channel.mention} was deleted: only numbers are allowed.")
-            except Exception:
+            except discord.Forbidden:
+                pass
+            except discord.NotFound:
                 pass
             return
 
         number = int(content)
         previous_number = await self.config.guild(message.guild).previous_number()
-        anticheat = await self.config.guild(message.guild).anticheat() if await self.config.guild(message.guild).exists() and hasattr(self.config.guild(message.guild), 'anticheat') else False
-        last_counter = await self.config.guild(message.guild).last_counter() if await self.config.guild(message.guild).exists() and hasattr(self.config.guild(message.guild), 'last_counter') else None
+        anticheat = await self.config.guild(message.guild).anticheat()
+        last_counter = await self.config.guild(message.guild).last_counter()
 
         # Anti-cheat: prevent same user from counting twice in a row
         if anticheat and last_counter == message.author.id:
-            await message.delete()
             try:
+                await message.delete()
                 await message.author.send(f"You cannot count twice in a row in {channel.mention}.")
-            except Exception:
+            except discord.Forbidden:
+                pass
+            except discord.NotFound:
                 pass
             return
 
         if number != (previous_number + 1):
-            await message.delete()
             try:
+                await message.delete()
                 await message.author.send(f"Your message in {channel.mention} was deleted: only the next number ({previous_number + 1}) is allowed.")
-            except Exception:
+            except discord.Forbidden:
+                pass
+            except discord.NotFound:
                 pass
             return
 
         await self.config.guild(message.guild).previous_number.set(number)
         await self.config.guild(message.guild).last_counter.set(message.author.id)
         try:
-            await message.add_reaction("✅")
-        except Exception:
+            await message.add_reaction("\u2705")
+        except discord.Forbidden:
             pass

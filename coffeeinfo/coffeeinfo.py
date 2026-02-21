@@ -6,18 +6,19 @@
 # |_| \_|\___/ |_|   |_| |_| |_|_____|_| \_\_____/_/   \_\_____|_/_/   \_\_| \_\
 # 
 
-from redbot.core import commands
-from redbot.core import checks
-from redbot.core.utils.menus import menu, DEFAULT_CONTROLS
 import discord
+from redbot.core import commands, checks, Config
 from discord.ext import tasks
+import logging
+
+log = logging.getLogger("red.nottherealtar.coffeeinfo")
+
 
 class CoffeeInfo(commands.Cog):
     """Cog to display server stats in an automatically updating voice channel style."""
 
     def __init__(self, bot):
         self.bot = bot
-        from redbot.core import Config
         self.config = Config.get_conf(self, identifier=20260108, force_registration=True)
         default_guild = {
             "category_id": None,
@@ -26,7 +27,14 @@ class CoffeeInfo(commands.Cog):
             "boosts_id": None
         }
         self.config.register_guild(**default_guild)
+
+    async def cog_load(self):
+        """Start the update task when cog loads."""
         self.check_for_updates.start()
+
+    async def cog_unload(self):
+        """Cancel the update task when cog unloads."""
+        self.check_for_updates.cancel()
 
     async def red_delete_data_for_user(self, **kwargs):
         """Nothing to delete."""
@@ -137,21 +145,37 @@ class CoffeeInfo(commands.Cog):
 
     @tasks.loop(seconds=900)
     async def check_for_updates(self):
+        """Background task to update server stats every 15 minutes."""
         for guild in self.bot.guilds:
-            humans_id = await self.config.guild(guild).humans_id()
-            bots_id = await self.config.guild(guild).bots_id()
-            boosts_id = await self.config.guild(guild).boosts_id()
-            human_count = sum(1 for member in guild.members if not member.bot)
-            bot_count = sum(1 for member in guild.members if member.bot)
-            if humans_id:
-                channel = guild.get_channel(humans_id)
-                if channel:
-                    await channel.edit(name=f'Humans: {human_count}')
-            if bots_id:
-                channel = guild.get_channel(bots_id)
-                if channel:
-                    await channel.edit(name=f'Bots: {bot_count}')
-            if boosts_id:
-                channel = guild.get_channel(boosts_id)
-                if channel:
-                    await channel.edit(name=f'Server Boosts: {guild.premium_subscription_count}')
+            try:
+                humans_id = await self.config.guild(guild).humans_id()
+                bots_id = await self.config.guild(guild).bots_id()
+                boosts_id = await self.config.guild(guild).boosts_id()
+
+                if not any([humans_id, bots_id, boosts_id]):
+                    continue
+
+                human_count = sum(1 for member in guild.members if not member.bot)
+                bot_count = sum(1 for member in guild.members if member.bot)
+
+                if humans_id:
+                    channel = guild.get_channel(humans_id)
+                    if channel:
+                        await channel.edit(name=f'Humans: {human_count}')
+                if bots_id:
+                    channel = guild.get_channel(bots_id)
+                    if channel:
+                        await channel.edit(name=f'Bots: {bot_count}')
+                if boosts_id:
+                    channel = guild.get_channel(boosts_id)
+                    if channel:
+                        await channel.edit(name=f'Server Boosts: {guild.premium_subscription_count}')
+            except discord.Forbidden:
+                pass
+            except Exception as e:
+                log.error(f"Error updating stats for guild {guild.id}: {e}")
+
+    @check_for_updates.before_loop
+    async def before_check_for_updates(self):
+        """Wait until the bot is ready before starting the loop."""
+        await self.bot.wait_until_ready()

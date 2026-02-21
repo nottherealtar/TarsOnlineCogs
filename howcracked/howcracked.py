@@ -265,7 +265,7 @@ class HowCracked(commands.Cog):
             await ctx.send("Invalid record type. Please specify either 'highest' or 'lowest'.")
             return
 
-        record = await self.config.get_attr(record_type)()
+        record = await getattr(self.config, record_type)()
         if record["user"] is None:
             await ctx.send(f"No {record_type} record found.")
             return

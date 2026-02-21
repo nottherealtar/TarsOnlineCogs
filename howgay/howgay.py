@@ -7,7 +7,7 @@
 # 
 
 from redbot.core import commands
-from discord import Embed, User, NotFound
+from discord import Embed, User
 import random
 
 class HowGay(commands.Cog):
@@ -56,8 +56,4 @@ class HowGay(commands.Cog):
         embed.description = f"{target_user.mention} is {power_level}!  {gay_percentage:.2f}% {random.choice(self.emojis)}"
         embed.set_footer(text="Powered by the Gay-o-Meter")
 
-        # Send the embed
-        try:
-            await ctx.send(embed=embed)
-        except NotFound:
-            await ctx.send("User not found.")
+        await ctx.send(embed=embed)

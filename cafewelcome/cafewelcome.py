@@ -116,8 +116,7 @@ class CafeWelcome(commands.Cog):
     @staticmethod
     def _get_average_l(image: Image.Image):
         im = np.array(image)
-        w, h = im.shape
-        return np.average(im.reshape(w * h))
+        return np.average(im)
 
     def _convert_image_to_ascii(self, IMAGE: Image.Image, cols: int, scale: float, moreLevels: bool):
         """https://www.geeksforgeeks.org/converting-image-ascii-image-python/"""

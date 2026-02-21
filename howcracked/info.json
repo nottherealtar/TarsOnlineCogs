@@ -5,13 +5,15 @@
     "install_msg": "`[p]help howcracked`",
     "name": "howcracked",
     "short": "Rate the cracked level of a user or yourself.",
-    "description": "This cog rates the cracked level of a user or yourself.",
+    "description": "This cog rates the cracked level of a user or yourself with RPG-style icons and power levels.",
     "min_bot_version": "3.5.0",
+    "requirements": ["pillow"],
     "tags": [
         "skill",
         "level",
-        "fun"
+        "fun",
+        "image"
     ],
-    "end_user_data_statement": "This cog does not persistently store any data or metadata about users.",
+    "end_user_data_statement": "This cog stores highest/lowest cracked records globally. Individual user data can be cleared by bot owner.",
     "type": "COG"
 }

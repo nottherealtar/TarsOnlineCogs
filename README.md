@@ -12,15 +12,35 @@ This is a collection of cogs that I have made over time, some of them are just f
 </div>
 
 > # Current Available Cogs
-- `assky`~ `Sends a random ascii emoji` ![Cog Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen)
-- `cafewelcome`~ `Welcomes users with the BytesToBits' image generation.` ![Cog Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen)
-- `coffee`~ `Coffee bot brews you or a friend, a fresh cup of coffee!` ![Cog Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen)
-- `howcracked`~ `ArE yOu EvEn CrAcKEd BrO?!` ![Cog Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen)
-- `passgen`~ `Generates an 8 character password and sends via DM's` ![Cog Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen)
-- `projectpost`~ `Easy embeds, easy project posts` ![Cog Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen)
-- `scanner`~ `Using AltDentifier, auto scan members` ![Cog Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen)
-- `teachme`~ `Random Wise quotes sent on command` ![Cog Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen)
-- `thankyou`~ `Thank you for the coffee, coffee-bot <3` ![Cog Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen)
+
+### Server Management & Security
+| Cog | Description | Status |
+|-----|-------------|--------|
+| `serverassistant` | Comprehensive server management with moderation tools, anti-spam, autorole, verification buttons, and logging | ![Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen) |
+| `scanner` | Scans new members and flags young accounts for moderation review | ![Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen) |
+| `verifyall` | Mass verification tool to assign verified role to members | ![Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen) |
+| `suggestme` | Server suggestion system with voting and staff approval | ![Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen) |
+
+### Server Utilities
+| Cog | Description | Status |
+|-----|-------------|--------|
+| `cafewelcome` | Generates ASCII-themed welcome GIFs for new members | ![Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen) |
+| `coffeeinfo` | Display server stats in auto-updating voice channels | ![Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen) |
+| `coffeestatus` | Manage the bot's presence and activity status | ![Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen) |
+| `InfiniCount` | Counting channel where users count +1 with anti-cheat | ![Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen) |
+| `passgen` | Generates secure random passwords and sends via DM | ![Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen) |
+| `projectpost` | Interactive project announcement embed creator | ![Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen) |
+
+### Fun & Games
+| Cog | Description | Status |
+|-----|-------------|--------|
+| `arcraiders` | Arc Raiders map rotation tracker with auto-updates | ![Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen) |
+| `assky` | Sends a random ASCII emoji/emoticon | ![Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen) |
+| `coffee` | Brew a virtual cup of coffee for yourself or a friend | ![Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen) |
+| `howcracked` | Rate the "cracked" level with RPG-style icons | ![Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen) |
+| `howgay` | Fun rainbow percentage meter | ![Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen) |
+| `teachme` | Get random inspirational quotes from ZenQuotes | ![Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen) |
+| `thankyou` | Send thank you messages to other users | ![Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen) |
 
 ***
 <div align="center">
@@ -28,107 +48,48 @@ This is a collection of cogs that I have made over time, some of them are just f
 > ## Open Source and available to the public, please credit where due.
 
 > # Installation:
-1. Download the latest releases from [here](https://github.com/nottherealtar/TarsOnlineCogs/)
-    Installing them via the downloader/cog-manager cog assuming you have installed that as required.
-    - `[p]repo add TarsOnlineCafe https://github.com/nottherealtar/TarsOnlineCogs`
-    - `[p]cog install TarsOnlineCogs <cog>`
-    - `[p]load <cog>`
+1. Add the repo and install cogs via the downloader cog:
+    ```
+    [p]repo add TarsOnlineCafe https://github.com/nottherealtar/TarsOnlineCogs
+    [p]cog install TarsOnlineCafe <cog>
+    [p]load <cog>
+    ```
+
 </div>
-***
-
-> ## To-Do Cogs
-- `giveaway`~ `Givesaways are coming soon!` ![Cog ToDo](https://img.shields.io/static/v1?label=Cog&message=ToDo&color=red)
-- `meme`~ `Makes memes with images in chat` ![Cog ToDo](https://img.shields.io/static/v1?label=Cog&message=ToDo&color=red)
-- `rolechecker`~ `Checks if roles exist and assigns them` ![Cog ToDo](https://img.shields.io/static/v1?label=Cog&message=ToDo&color=red)
-- `serverinfo`~ `Shows server info in chat. Very detailed server info and chat info.` ![Cog ToDo](https://img.shields.io/static/v1?label=Cog&message=ToDo&color=red)
-- `githubstats`~ `Sends & displays all kinds of github info` ![Cog ToDo](https://img.shields.io/static/v1?label=Cog&message=ToDo&color=red)
 
 ***
 
-> ## Cool Useless Tree Directory
-```
-📦 TarsOnlineCogs
-├─ .vscode
-│  └─ settings.json
-├─ InfiniCount
-│  ├─ __init__.py
-│  ├─ infinicount.py
-│  └─ info.json
-├─ LICENSE
-├─ README.md
-├─ [WIP]coffeecommits
-│  ├─ __init__.py
-│  ├─ coffeecommits.py
-│  └─ info.json
-├─ [WIP]freshtechafrica
-│  ├─ __init__.py
-│  ├─ freshtechafrica.py
-│  └─ info.json
-├─ [WIP]varyquote
-│  ├─ __init__.py
-│  ├─ info.json
-│  └─ varyquote.py
-├─ assky
-│  ├─ __init__.py
-│  ├─ assky.py
-│  └─ info.json
-├─ cafewelcome
-│  ├─ __init__.py
-│  ├─ cafewelcome.py
-│  ├─ data
-│  │  ├─ IBM-Courier-Bold-COPYRIGHT.txt
-│  │  ├─ IBM-Courier-Bold.ttf
-│  │  ├─ pixelscr-source-altsys.png
-│  │  ├─ pixelscr-source.txt
-│  │  └─ pixelscr.ttf
-│  └─ info.json
-├─ coffee
-│  ├─ __init__.py
-│  ├─ coffee.py
-│  └─ info.json
-├─ coffeeinfo
-│  ├─ __init__.py
-│  ├─ coffeeinfo.py
-│  └─ info.json
-├─ coffeestatus
-│  ├─ __init__.py
-│  ├─ coffeestatus.py
-│  └─ info.json
-├─ count4u
-│  ├─ __init__.py
-│  ├─ count4u.py
-│  └─ info.json
-├─ howcracked
-│  ├─ __init__.py
-│  ├─ howcracked.py
-│  └─ info.json
-├─ howgay
-│  ├─ __init__.py
-│  ├─ howgay.py
-│  └─ info.json
-├─ passgen
-│  ├─ __init__.py
-│  ├─ advpassgen.py
-│  ├─ info.json
-│  └─ passgen.py
-├─ projectpost
-│  ├─ __init__.py
-│  ├─ info.json
-│  └─ projectpost.py
-├─ scanner
-│  ├─ __init__.py
-│  ├─ info.json
-│  └─ scanner.py
-├─ suggestme
-│  ├─ __init__.py
-│  ├─ info.json
-│  └─ suggestme.py
-├─ teachme
-│  ├─ __init__.py
-│  ├─ info.json
-│  └─ teachme.py
-└─ thankyou
-   ├─ __init__.py
-   ├─ info.json
-   └─ thankyou.py
-```
+> ## Requirements
+Some cogs have additional requirements that will be installed automatically:
+- `cafewelcome` - numpy, pillow
+- `howcracked` - pillow
+- `teachme` - aiohttp
+
+***
+
+> ## Featured Cogs
+
+### ServerAssistant
+Full-featured server management cog with:
+- **Anti-Spam Protection** - Configurable message limits, time windows, and actions (mute/kick/warn)
+- **Moderation Tools** - Kick, ban, mute, unmute, warn, purge with role hierarchy checks
+- **Autorole** - Automatically assign roles to new members
+- **Verification Buttons** - Interactive verification system
+- **Logging** - Track all moderation actions
+- **Utilities** - Color roles, channel map, polls, server stats, user/role info
+
+### Arc Raiders
+Track Arc Raiders game map rotations:
+- View current and upcoming map conditions
+- Search by map or event type
+- 24-hour UTC-based schedule
+- Auto-updating embeds in designated channels
+- All 5 maps: Dam, Buried City, Spaceport, Blue Gate, Stella Montis
+
+***
+
+<div align="center">
+
+Made with coffee and code
+
+</div>

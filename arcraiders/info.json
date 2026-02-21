@@ -1,0 +1,20 @@
+{
+    "author": [
+        "nottherealtar"
+    ],
+    "install_msg": "Arc Raiders cog installed! Use `[p]arc` to see current map rotations.",
+    "name": "ArcRaiders",
+    "short": "Track Arc Raiders map rotations and events",
+    "description": "A comprehensive Arc Raiders map rotation tracker. Shows current and upcoming map conditions, event schedules, and supports automatic hourly updates. Based on the 24-hour UTC rotation cycle with major and minor events across all 5 maps.",
+    "min_bot_version": "3.5.0",
+    "requirements": [],
+    "tags": [
+        "game",
+        "arc-raiders",
+        "rotation",
+        "events",
+        "tracker"
+    ],
+    "end_user_data_statement": "This cog stores guild settings for auto-update channels. No personal user data is stored.",
+    "type": "COG"
+}

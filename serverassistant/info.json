@@ -2,17 +2,19 @@
     "author": [
         "nottherealtar"
     ],
-    "install_msg": "`[p]serverassistant help`",
+    "install_msg": "`[p]serverassistant` for help",
     "name": "ServerAssistant",
-    "short": "Lets help organize your server!",
-    "description": "ServerAssistant is a cog that helps you organize your server by providing useful commands for managing channels; colourizing them in a rainbow order, generating mind maps of the channels structures etc.",
+    "short": "Server management, moderation, and anti-spam tools",
+    "description": "ServerAssistant is a comprehensive server management cog with moderation tools (kick, ban, mute, warn, purge), anti-spam protection, autorole, verification buttons, logging, color roles, and server utilities.",
     "min_bot_version": "3.5.0",
     "requirements": [],
     "tags": [
-        "util",
+        "utility",
         "admin",
-        "channels"
+        "moderation",
+        "antispam",
+        "security"
     ],
-    "end_user_data_statement": "This cog does not persistently store any data or metadata about users.",
+    "end_user_data_statement": "This cog stores guild settings including autorole, log channel, and anti-spam configuration. No personal user data is stored.",
     "type": "COG"
 }

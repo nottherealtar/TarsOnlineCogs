@@ -38,9 +38,13 @@ class PassGen(commands.Cog):
         try:
             embed = discord.Embed(title="Your password:", description=f"`{password}`", color=random.randint(0, 0xFFFFFF))
             await ctx.author.send(embed=embed)
-            await ctx.message.delete() # Deletes the original message with the command
+            try:
+                await ctx.message.delete()
+            except (discord.Forbidden, discord.NotFound):
+                pass
+            await ctx.send("Password sent to your DMs!", delete_after=5)
         except discord.Forbidden:
-            await ctx.send(f"I couldn't send you a DM. Here is your password: {password}")
+            await ctx.send("I couldn't send you a DM. Please enable DMs from server members and try again.")
 
     def _generate_password(self, length):
         characters = string.ascii_letters + string.digits + string.punctuation

@@ -3,12 +3,15 @@
     "install_msg": "Use `[p]help CafeWelcome` after loading the cog to find configuration options.",
     "name": "cafewelcome",
     "short": "Welcomes users with the BytesToBits' image generation.",
-    "description": "Generates ASCII-themed welcome gifs.",
+    "description": "Generates ASCII-themed welcome gifs for new members joining your server.",
     "min_bot_version": "3.5.0",
+    "requirements": ["numpy", "pillow"],
     "tags": [
         "ascii",
         "text",
-        "welcome"
+        "welcome",
+        "image"
     ],
+    "end_user_data_statement": "This cog does not persistently store any data or metadata about users.",
     "type": "COG"
 }

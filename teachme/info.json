@@ -7,6 +7,7 @@
     "short": "Makes you wiser",
     "description": "Makes you wiser none-the-less, Pumps quotes\nWARNING: IRL SPOILERS",
     "min_bot_version": "3.5.0",
+    "requirements": ["aiohttp"],
     "tags": [
         "quotes",
         "text",
