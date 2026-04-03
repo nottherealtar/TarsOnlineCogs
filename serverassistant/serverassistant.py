@@ -279,8 +279,9 @@ class ServerAssistant(commands.Cog):
         help_message = discord.Embed(
             title="ServerAssistant",
             description=(
-                f"Prefix **`{p}`** or slash **`/serverassistant`** — same commands where marked hybrid.\n"
-                "**Tip:** Set `{0}serverassistant log set #channel` so kicks, bans, verification, and anti-spam are recorded."
+                f"Prefix **`{p}`** or slash **`/serverassistant`**.\n"
+                "**Slash limit:** `antispam`, `colorpicker`, `level`, `starboard`, `reactionrole`, and `rolemenu` are **prefix-only**; everything else listed is also on slash where supported.\n"
+                "**Tip:** `{0}serverassistant log set #channel` for mod logs."
             ).format(p),
             color=discord.Color.blurple(),
         )
@@ -330,7 +331,7 @@ class ServerAssistant(commands.Cog):
         await ctx.send(embed=help_message)
 
     # --- Anti-Spam ---
-    @serverassistant.group(invoke_without_command=True, fallback="show")
+    @serverassistant.group(invoke_without_command=True, fallback="show", with_app_command=False)
     @commands.admin_or_permissions(manage_guild=True)
     async def antispam(self, ctx):
         """Configure anti-spam settings."""
@@ -1034,7 +1035,7 @@ class ServerAssistant(commands.Cog):
             await ctx.send("No roles to create.")
 
     # --- Color Picker ---
-    @serverassistant.group(invoke_without_command=True, fallback="show")
+    @serverassistant.group(invoke_without_command=True, fallback="show", with_app_command=False)
     @commands.has_permissions(manage_roles=True)
     async def colorpicker(self, ctx):
         """Color picker settings."""
@@ -1077,7 +1078,7 @@ class ServerAssistant(commands.Cog):
         await ctx.send(f"Color picker set up in {channel.mention}!")
 
     # --- Leveling ---
-    @serverassistant.group(name="level", invoke_without_command=True, fallback="show")
+    @serverassistant.group(name="level", invoke_without_command=True, fallback="show", with_app_command=False)
     async def level_cmd(self, ctx, member: Optional[discord.Member] = None):
         """Show XP / level, or configure leveling (subcommands)."""
         member = member or ctx.author
@@ -1190,7 +1191,7 @@ class ServerAssistant(commands.Cog):
         await ctx.send(f"Role {role.mention} no longer ignored for XP.")
 
     # --- Starboard ---
-    @serverassistant.group(name="starboard", invoke_without_command=True, fallback="show")
+    @serverassistant.group(name="starboard", invoke_without_command=True, fallback="show", with_app_command=False)
     @commands.admin_or_permissions(manage_guild=True)
     async def starboard_cmd(self, ctx):
         """Starboard: highlight messages that reach a reaction threshold."""
@@ -1243,7 +1244,7 @@ class ServerAssistant(commands.Cog):
         await ctx.send(f"Self-stars **{'count' if enabled else 'do not count'}** toward the minimum.")
 
     # --- Reaction roles ---
-    @serverassistant.group(name="reactionrole", invoke_without_command=True, fallback="list")
+    @serverassistant.group(name="reactionrole", invoke_without_command=True, fallback="list", with_app_command=False)
     @commands.admin_or_permissions(manage_roles=True)
     async def reactionrole(self, ctx):
         """Map message reactions to roles (classic reaction roles)."""
@@ -1314,7 +1315,7 @@ class ServerAssistant(commands.Cog):
         await ctx.send("All reaction roles cleared for that message.")
 
     # --- Role menu (select menu) ---
-    @serverassistant.group(name="rolemenu", invoke_without_command=True, fallback="help")
+    @serverassistant.group(name="rolemenu", invoke_without_command=True, fallback="help", with_app_command=False)
     @commands.admin_or_permissions(manage_roles=True)
     async def rolemenu(self, ctx):
         await ctx.send(
