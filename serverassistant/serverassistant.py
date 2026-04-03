@@ -1,8 +1,38 @@
 from redbot.core import commands, Config
 import discord
+from discord import app_commands
 from datetime import datetime, timedelta
 from collections import defaultdict
 import asyncio
+
+COLOR_ROLES = {
+    "Warm": {
+        "Red": discord.Color.red(),
+        "Orange": discord.Color.orange(),
+        "Yellow": discord.Color.gold(),
+        "Gold": discord.Color.gold(),
+        "Pink": discord.Color.magenta(),
+    },
+    "Cool": {
+        "Blue": discord.Color.blue(),
+        "Cyan": discord.Color.from_rgb(0, 255, 255),
+        "Teal": discord.Color.teal(),
+        "Indigo": discord.Color.from_rgb(75, 0, 130),
+        "Violet": discord.Color.from_rgb(238, 130, 238),
+        "Purple": discord.Color.purple(),
+    },
+    "Neutral": {
+        "White": discord.Color.from_rgb(255, 255, 255),
+        "Black": discord.Color.from_rgb(0, 0, 0),
+        "Gray": discord.Color.from_rgb(128, 128, 128),
+        "Silver": discord.Color.from_rgb(192, 192, 192),
+        "Brown": discord.Color.from_rgb(139, 69, 19),
+    },
+    "Nature": {
+        "Green": discord.Color.green(),
+        "Lime": discord.Color.from_rgb(191, 255, 0),
+    },
+}
 
 
 class ServerAssistant(commands.Cog):
@@ -18,7 +48,9 @@ class ServerAssistant(commands.Cog):
             "antispam_message_limit": 5,  # messages
             "antispam_time_window": 5,    # seconds
             "antispam_action": "mute",    # mute, kick, or warn
-            "antispam_mute_duration": 300 # seconds (5 minutes)
+            "antispam_mute_duration": 300, # seconds (5 minutes)
+            "colorpicker_channel": None,
+            "colorpicker_message": None,
         }
         self.config.register_guild(**default_guild)
 
@@ -30,13 +62,13 @@ class ServerAssistant(commands.Cog):
 
     async def cog_load(self):
         """Called when the cog is loaded."""
-        pass
+        self.bot.add_view(ColorPickerView(self))
 
     async def red_delete_data_for_user(self, **kwargs):
         """Nothing to delete."""
         return
 
-    @commands.group(invoke_without_command=True)
+    @commands.hybrid_group(invoke_without_command=True, fallback="help")
     async def serverassistant(self, ctx):
         """Base command for the ServerAssistant cog."""
         help_message = discord.Embed(
@@ -59,7 +91,7 @@ class ServerAssistant(commands.Cog):
         await ctx.send(embed=help_message)
 
     # --- Anti-Spam ---
-    @serverassistant.group(invoke_without_command=True)
+    @serverassistant.hybrid_group(invoke_without_command=True, fallback="show")
     @commands.admin_or_permissions(manage_guild=True)
     async def antispam(self, ctx):
         """Configure anti-spam settings."""
@@ -237,7 +269,7 @@ class ServerAssistant(commands.Cog):
         await ctx.send(f"Verification message sent to {channel.mention}.")
 
     # --- Autorole ---
-    @serverassistant.group(invoke_without_command=True)
+    @serverassistant.hybrid_group(invoke_without_command=True, fallback="show")
     async def autorole(self, ctx):
         """Auto role assignment settings."""
         role_id = await self.config.guild(ctx.guild).autorole()
@@ -279,20 +311,30 @@ class ServerAssistant(commands.Cog):
 
     # --- Poll ---
     @serverassistant.command()
-    async def poll(self, ctx, question: str, *options):
-        """Create a poll. Usage: [p]serverassistant poll 'Question?' 'Option1' 'Option2' ..."""
-        if len(options) < 2:
-            await ctx.send("You must provide at least two options.")
-            return
-        emojis = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"]
-        if len(options) > len(emojis):
-            await ctx.send(f"Max {len(emojis)} options allowed.")
-            return
-        desc = "\n".join(f"{emojis[i]} {opt}" for i, opt in enumerate(options))
-        embed = discord.Embed(title=question, description=desc, color=0x3498db)
-        poll_msg = await ctx.send(embed=embed)
-        for i in range(len(options)):
-            await poll_msg.add_reaction(emojis[i])
+    @app_commands.describe(
+        question="The poll question",
+        option1="First option (required)",
+        option2="Second option (required)",
+        option3="Third option",
+        option4="Fourth option",
+        option5="Fifth option",
+        option6="Sixth option",
+        option7="Seventh option",
+        option8="Eighth option",
+        option9="Ninth option",
+        option10="Tenth option",
+    )
+    async def poll(self, ctx, question: str, option1: str, option2: str,
+                   option3: str = None, option4: str = None, option5: str = None,
+                   option6: str = None, option7: str = None, option8: str = None,
+                   option9: str = None, option10: str = None):
+        """Create a poll with up to 10 options. Closes automatically after 5 minutes."""
+        options = [o for o in [option1, option2, option3, option4, option5,
+                                option6, option7, option8, option9, option10] if o]
+        view = PollView(question, options)
+        embed = view.build_embed()
+        msg = await ctx.send(embed=embed, view=view)
+        view.message = msg
 
     # --- User Info ---
     @serverassistant.command()
@@ -334,6 +376,44 @@ class ServerAssistant(commands.Cog):
         if guild.icon:
             embed.set_thumbnail(url=guild.icon.url)
         await ctx.send(embed=embed)
+
+    # --- Server Owners (Bot Owner Only) ---
+    @serverassistant.command(name="owners")
+    @commands.is_owner()
+    async def server_owners(self, ctx):
+        """List all server owners that have the bot. (Bot owner only)"""
+        owner_map = {}  # {owner_id: {"user": user_obj, "guilds": [guild_names]}}
+        for guild in self.bot.guilds:
+            oid = guild.owner_id
+            if oid not in owner_map:
+                owner_map[oid] = {"user": guild.owner, "guilds": []}
+            owner_map[oid]["guilds"].append(guild.name)
+
+        # Sort by server count descending
+        sorted_owners = sorted(owner_map.values(), key=lambda x: len(x["guilds"]), reverse=True)
+
+        embeds = []
+        per_page = 10
+        for page_start in range(0, len(sorted_owners), per_page):
+            page_owners = sorted_owners[page_start:page_start + per_page]
+            embed = discord.Embed(
+                title="Server Owners",
+                color=discord.Color.gold(),
+            )
+            for entry in page_owners:
+                user = entry["user"]
+                guilds = entry["guilds"]
+                name = str(user) if user else f"Unknown User"
+                value = f"**Servers ({len(guilds)}):** {', '.join(guilds)}"
+                embed.add_field(name=name, value=value, inline=False)
+
+            page_num = page_start // per_page + 1
+            total_pages = (len(sorted_owners) + per_page - 1) // per_page
+            embed.set_footer(text=f"Page {page_num}/{total_pages} — {len(self.bot.guilds)} total servers")
+            embeds.append(embed)
+
+        for embed in embeds:
+            await ctx.send(embed=embed, ephemeral=True)
 
     # --- Moderation Tools ---
 
@@ -452,7 +532,7 @@ class ServerAssistant(commands.Cog):
                     pass
 
     # --- Logging ---
-    @serverassistant.group(invoke_without_command=True)
+    @serverassistant.hybrid_group(invoke_without_command=True, fallback="show")
     async def log(self, ctx):
         """Logging settings."""
         log_channel_id = await self.config.guild(ctx.guild).log_channel()
@@ -478,26 +558,9 @@ class ServerAssistant(commands.Cog):
     @commands.has_permissions(manage_roles=True)
     async def create_color_roles(self, ctx):
         """Create a set of predefined color roles."""
-        colors = {
-            "Red": discord.Color.red(),
-            "Green": discord.Color.green(),
-            "Blue": discord.Color.blue(),
-            "Yellow": discord.Color.gold(),
-            "Purple": discord.Color.purple(),
-            "Orange": discord.Color.orange(),
-            "Pink": discord.Color.magenta(),
-            "Teal": discord.Color.teal(),
-            "Cyan": discord.Color.from_rgb(0, 255, 255),
-            "White": discord.Color.from_rgb(255, 255, 255),
-            "Black": discord.Color.from_rgb(0, 0, 0),
-            "Brown": discord.Color.from_rgb(139, 69, 19),
-            "Gray": discord.Color.from_rgb(128, 128, 128),
-            "Lime": discord.Color.from_rgb(191, 255, 0),
-            "Indigo": discord.Color.from_rgb(75, 0, 130),
-            "Violet": discord.Color.from_rgb(238, 130, 238),
-            "Gold": discord.Color.gold(),
-            "Silver": discord.Color.from_rgb(192, 192, 192),
-        }
+        colors = {}
+        for group in COLOR_ROLES.values():
+            colors.update(group)
 
         created_roles = []
         skipped_roles = []
@@ -519,6 +582,49 @@ class ServerAssistant(commands.Cog):
             await ctx.send(f"Skipped existing roles: {', '.join(skipped_roles)}")
         if not created_roles and not skipped_roles:
             await ctx.send("No roles to create.")
+
+    # --- Color Picker ---
+    @serverassistant.hybrid_group(invoke_without_command=True, fallback="show")
+    @commands.has_permissions(manage_roles=True)
+    async def colorpicker(self, ctx):
+        """Color picker settings."""
+        ch_id = await self.config.guild(ctx.guild).colorpicker_channel()
+        channel = ctx.guild.get_channel(ch_id) if ch_id else None
+        await ctx.send(f"Color picker channel: {channel.mention if channel else 'Not set up'}")
+
+    @colorpicker.command(name="setup")
+    @commands.has_permissions(manage_roles=True)
+    async def colorpicker_setup(self, ctx, channel: discord.TextChannel = None):
+        """Set up the color role picker. Optionally specify a channel, or one will be created."""
+        if channel is None:
+            overwrites = {
+                ctx.guild.default_role: discord.PermissionOverwrite(
+                    send_messages=False, add_reactions=False
+                ),
+                ctx.guild.me: discord.PermissionOverwrite(
+                    send_messages=True, manage_messages=True
+                ),
+            }
+            channel = await ctx.guild.create_text_channel(
+                "color-roles", overwrites=overwrites, reason="Color picker setup"
+            )
+
+        embed = discord.Embed(
+            title="Choose Your Role Color",
+            description=(
+                "Pick a color from the dropdowns below to set your name color!\n\n"
+                "You can only have **one** color role at a time — "
+                "choosing a new one will replace your current color."
+            ),
+            color=discord.Color.from_rgb(255, 255, 255),
+        )
+        view = ColorPickerView(self)
+        msg = await channel.send(embed=embed, view=view)
+
+        await self.config.guild(ctx.guild).colorpicker_channel.set(channel.id)
+        await self.config.guild(ctx.guild).colorpicker_message.set(msg.id)
+
+        await ctx.send(f"Color picker set up in {channel.mention}!")
 
     # --- Channel Map ---
     @serverassistant.command(name="channelmap")
@@ -595,3 +701,154 @@ class VerifyView(discord.ui.View):
             await interaction.response.send_message("I don't have permission to assign the role. Please contact an admin.", ephemeral=True)
         except Exception as e:
             await interaction.response.send_message(f"An error occurred: {e}", ephemeral=True)
+
+
+class ColorRoleSelect(discord.ui.Select):
+    """A single dropdown for a color group."""
+
+    def __init__(self, cog, group_name, colors):
+        options = [
+            discord.SelectOption(label=name, value=name)
+            for name in colors
+        ]
+        super().__init__(
+            placeholder=f"{group_name} Colors",
+            min_values=1,
+            max_values=1,
+            options=options,
+            custom_id=f"serverassistant_color_{group_name.lower()}",
+        )
+        self.cog = cog
+        self.all_color_names = []
+        for group in COLOR_ROLES.values():
+            self.all_color_names.extend(group.keys())
+
+    async def callback(self, interaction: discord.Interaction):
+        color_name = self.values[0]
+        guild = interaction.guild
+        member = interaction.user
+
+        # Find the role
+        role = discord.utils.get(guild.roles, name=color_name)
+        if not role:
+            await interaction.response.send_message(
+                f"The **{color_name}** role doesn't exist. An admin needs to run `/serverassistant createcolorroles` first.",
+                ephemeral=True,
+            )
+            return
+
+        # Remove existing color roles
+        existing_color_roles = [
+            r for r in member.roles if r.name in self.all_color_names
+        ]
+        if existing_color_roles:
+            await member.remove_roles(*existing_color_roles, reason="Color role change")
+
+        # Assign new color role
+        await member.add_roles(role, reason="Color role selection")
+        await interaction.response.send_message(
+            f"You've been given the **{color_name}** color role!",
+            ephemeral=True,
+        )
+
+
+class ColorPickerView(discord.ui.View):
+    """Persistent color picker with grouped dropdowns."""
+
+    def __init__(self, cog):
+        super().__init__(timeout=None)
+        for group_name, colors in COLOR_ROLES.items():
+            self.add_item(ColorRoleSelect(cog, group_name, colors))
+
+
+class PollButton(discord.ui.Button):
+    def __init__(self, label, emoji, option_index):
+        super().__init__(
+            style=discord.ButtonStyle.primary,
+            label=label,
+            emoji=emoji,
+        )
+        self.option_index = option_index
+
+    async def callback(self, interaction: discord.Interaction):
+        view: PollView = self.view
+        old_vote = view.votes.get(interaction.user.id)
+        view.votes[interaction.user.id] = self.option_index
+
+        if old_vote == self.option_index:
+            await interaction.response.send_message("You already voted for this!", ephemeral=True)
+        elif old_vote is not None:
+            await interaction.response.send_message(
+                f"Changed your vote to: **{view.options[self.option_index]}**", ephemeral=True
+            )
+        else:
+            await interaction.response.send_message(
+                f"You voted for: **{view.options[self.option_index]}**", ephemeral=True
+            )
+
+        # Update embed with new counts
+        await interaction.message.edit(embed=view.build_embed())
+
+
+class PollView(discord.ui.View):
+    EMOJIS = ["1\u20e3", "2\u20e3", "3\u20e3", "4\u20e3", "5\u20e3", "6\u20e3", "7\u20e3", "8\u20e3", "9\u20e3", "\U0001f51f"]
+
+    def __init__(self, question, options):
+        super().__init__(timeout=300)  # 5 minutes
+        self.question = question
+        self.options = options
+        self.votes = {}  # {user_id: option_index}
+        self.message = None
+
+        for i, option in enumerate(options):
+            self.add_item(PollButton(label=option, emoji=self.EMOJIS[i], option_index=i))
+
+    def build_embed(self, closed=False):
+        counts = {}
+        for idx in range(len(self.options)):
+            counts[idx] = sum(1 for v in self.votes.values() if v == idx)
+        total = sum(counts.values())
+
+        desc_lines = []
+        for i, opt in enumerate(self.options):
+            count = counts[i]
+            pct = f" ({count / total * 100:.0f}%)" if total > 0 else ""
+            bar = ""
+            if closed and total > 0:
+                filled = round(count / total * 10)
+                full_block = "\u2588"
+                light_block = "\u2591"
+                bar = f" {full_block * filled}{light_block * (10 - filled)}"
+            desc_lines.append(f"{self.EMOJIS[i]} **{opt}** \u2014 {count} vote{'s' if count != 1 else ''}{pct}{bar}")
+
+        if closed:
+            max_votes = max(counts.values())
+            if total == 0:
+                desc_lines.append("\n**No votes were cast.**")
+            else:
+                winners = [self.options[i] for i, c in counts.items() if c == max_votes]
+                if len(winners) == 1:
+                    desc_lines.append(f"\n**Winner: {winners[0]}!**")
+                else:
+                    desc_lines.append(f"\n**Tie: {', '.join(winners)}!**")
+
+        embed = discord.Embed(
+            title=f"{'[CLOSED] ' if closed else ''}\U0001f4ca {self.question}",
+            description="\n".join(desc_lines),
+            color=discord.Color.red() if closed else discord.Color.blue(),
+        )
+        if not closed:
+            embed.set_footer(text="Poll closes in 5 minutes")
+        else:
+            embed.set_footer(text=f"Final results \u2014 {total} total vote{'s' if total != 1 else ''}")
+        return embed
+
+    async def update_embed(self, message):
+        await message.edit(embed=self.build_embed())
+
+    async def on_timeout(self):
+        for child in self.children:
+            child.disabled = True
+        embed = self.build_embed(closed=True)
+        if self.message:
+            await self.message.edit(embed=embed, view=self)

@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:api.github.com)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nMajor cog fixes, security improvements, and new Arc Raiders cog\n\nServerAssistant:\n- Fixed broken class structure \\(commands before __init__\\)\n- Added full anti-spam system with configurable limits/actions\n- Added role hierarchy checks for moderation commands\n- Fixed verify button as standalone class\n- Added proper error handling throughout\n\nCritical Fixes:\n- assky: Rewrote - command was inside wrong method\n- howcracked: Fixed get_attr\\(\\) to getattr\\(\\)\n- InfiniCount: Added missing config fields \\(last_counter, anticheat\\)\n- scanner: Complete rewrite - was using invalid API calls\n\nMedium Fixes:\n- projectpost: Added timeout handling for wait_for\n- suggestme: Made configurable with Config persistence\n- teachme: Switched to aiohttp, added error handling\n- thankyou: Fixed exception types and error handler\n- verifyall: Fixed role checking logic\n- coffeeinfo: Added proper task lifecycle\n- cafewelcome: Fixed numpy array handling\n\nMinor Fixes:\n- coffeestatus: Removed duplicate import, fixed help text\n- passgen: Added error handling for message deletion\n- howgay: Removed unused imports\n\nNew:\n- arcraiders: Arc Raiders map rotation tracker with auto-updates\n\nUpdated info.json files with requirements and end_user_data_statements\nUpdated README with all current cogs\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git push)",
+      "Bash(cd \"C:\\\\Users\\\\nottherealtarPC\\\\Documents\\\\Github\\\\TarsOnlineCogs\" && python -c \"import ast; ast.parse\\(open\\('serverassistant/serverassistant.py'\\).read\\(\\)\\); print\\('OK'\\)\")",
+      "Bash(cd \"C:\\\\Users\\\\nottherealtarPC\\\\Documents\\\\Github\\\\TarsOnlineCogs\" && python -c \"import ast; ast.parse\\(open\\('serverassistant/serverassistant.py', encoding='utf-8'\\).read\\(\\)\\); print\\('OK'\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('serverassistant/serverassistant.py'\\).read\\(\\)\\); print\\('OK'\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('serverassistant/serverassistant.py', encoding='utf-8'\\).read\\(\\)\\); print\\('OK'\\)\")",
+      "Bash(python -c \"print\\('Python version:'\\); import sys; print\\(sys.version\\)\")"
+    ]
+  }
+}
