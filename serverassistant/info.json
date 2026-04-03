@@ -2,10 +2,10 @@
     "author": [
         "nottherealtar"
     ],
-    "install_msg": "`[p]serverassistant` for help",
+    "install_msg": "Run `[p]serverassistant` or `/serverassistant` for grouped help. Recommended: `[p]serverassistant log set #mod-log`, then configure `[p]serverassistant antispam` if you want rate limits. Color picker needs `[p]serverassistant createcolorroles` first.",
     "name": "ServerAssistant",
     "short": "Server management, moderation, and anti-spam tools",
-    "description": "ServerAssistant is a comprehensive server management cog with moderation tools (kick, ban, mute, warn, purge), anti-spam protection, autorole, verification buttons, logging, color roles, and server utilities.",
+    "description": "Server management: moderation (timed mute via timeout or Muted role), slowmode, lock/unlock, mod log, anti-spam, autorole, verification, color roles, announce + embed announce, polls, leveling, starboard, reaction roles, role menus (select), plus user/role/server stats and channel map.",
     "min_bot_version": "3.5.0",
     "requirements": [],
     "tags": [
@@ -13,8 +13,11 @@
         "admin",
         "moderation",
         "antispam",
-        "security"
+        "security",
+        "leveling",
+        "starboard",
+        "reactionroles"
     ],
-    "end_user_data_statement": "This cog stores guild settings including autorole, log channel, and anti-spam configuration. No personal user data is stored.",
+    "end_user_data_statement": "Stores per-guild settings (log, anti-spam, color picker, verification IDs, leveling options, starboard, reaction-role maps, role-menu messages) and per-member leveling XP only. No message logs or full profiles.",
     "type": "COG"
 }

@@ -1,9 +1,66 @@
 from redbot.core import commands, Config
 import discord
 from discord import app_commands
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from collections import defaultdict
 import asyncio
+import math
+import re
+from typing import Optional, Union
+
+DISCORD_TIMEOUT_MAX = timedelta(days=28)
+
+
+def _parse_duration_token(token: str) -> Optional[int]:
+    """Parse ``10s``, ``5m``, ``2h``, ``1d`` into seconds. Caps at 28 days (Discord timeout limit)."""
+    m = re.fullmatch(r"(\d+)([smhd])", token.strip().lower())
+    if not m:
+        return None
+    n, u = int(m.group(1)), m.group(2)
+    mult = {"s": 1, "m": 60, "h": 3600, "d": 86400}
+    sec = n * mult[u]
+    return min(sec, int(DISCORD_TIMEOUT_MAX.total_seconds()))
+
+
+def _split_mute_reason(reason: str) -> tuple[Optional[int], Optional[str]]:
+    """If *reason* starts with a duration token, return (seconds, rest). Otherwise (None, reason)."""
+    reason = (reason or "").strip()
+    if not reason:
+        return None, None
+    first, _, rest = reason.partition(" ")
+    dur = _parse_duration_token(first)
+    if dur is not None:
+        return dur, rest.strip() or None
+    return None, reason or None
+
+
+def _emoji_key(emoji: discord.PartialEmoji | str) -> str:
+    if isinstance(emoji, str):
+        return emoji
+    if emoji.id:
+        return f"{emoji.name}:{emoji.id}"
+    return emoji.name or ""
+
+
+def _level_from_xp(xp: int) -> int:
+    """``level = floor(sqrt(xp / 100))`` so early levels are quick, later ones stretch out."""
+    return int(math.sqrt(max(0, xp) / 100.0))
+
+
+def _xp_band(level: int) -> tuple[int, int]:
+    """Min XP (inclusive) for *level*, and min XP for *level+1*."""
+    low = int(level * level * 100)
+    high = int((level + 1) ** 2 * 100)
+    return low, high
+
+
+def _xp_progress(xp: int) -> tuple[int, int, int]:
+    """Current level, XP earned within this level, XP span of this level band."""
+    lvl = _level_from_xp(xp)
+    low, high = _xp_band(lvl)
+    span = max(1, high - low)
+    into = max(0, xp - low)
+    return lvl, into, span
 
 COLOR_ROLES = {
     "Warm": {
@@ -36,7 +93,11 @@ COLOR_ROLES = {
 
 
 class ServerAssistant(commands.Cog):
-    """A cog for organizing and protecting your Discord server."""
+    """Server utilities for public communities: moderation, light automation, member info, and optional anti-spam.
+
+    Use ``[p]serverassistant`` (or ``/serverassistant``) for a full command list. Admins should set a **log** channel
+    and review **antispam** before relying on it in production. Color roles require ``createcolorroles`` before the picker works.
+    """
 
     def __init__(self, bot):
         self.bot = bot
@@ -51,43 +112,221 @@ class ServerAssistant(commands.Cog):
             "antispam_mute_duration": 300, # seconds (5 minutes)
             "colorpicker_channel": None,
             "colorpicker_message": None,
+            "verify_button_roles": [],  # role IDs with persistent verify buttons (for restarts)
+            # Leveling
+            "leveling_enabled": False,
+            "leveling_xp_min": 15,
+            "leveling_xp_max": 25,
+            "leveling_cooldown": 60,
+            "leveling_ignored_channels": [],
+            "leveling_ignored_roles": [],
+            # Starboard
+            "starboard_channel": None,
+            "starboard_min": 3,
+            "starboard_emoji": "\N{WHITE MEDIUM STAR}",  # ⭐
+            "starboard_ignore_self": True,
+            "starboard_posts": {},  # str(orig_msg_id) -> starboard message id
+            # Reaction roles: str(msg_id) -> {emoji_key: role_id}
+            "reaction_roles": {},
+            # Role menus: str(msg_id) -> {"channel_id": int, "roles": [int, ...]}
+            "role_menus": {},
         }
         self.config.register_guild(**default_guild)
+        self.config.register_member(xp=0, last_xp_at=0.0)
 
         # Anti-spam tracking: {guild_id: {user_id: [timestamps]}}
         self.message_cache = defaultdict(lambda: defaultdict(list))
 
-        # Track persistent views
-        self._views_added = False
+        # Leveling cooldown in-memory {guild_id: {user_id: monotonic_ts}}
+        self._level_cooldown = defaultdict(dict)
+
+        # One bot.add_view per verification role ID (custom_id includes role id)
+        self._verify_view_role_ids = set()
+        self._role_menu_message_ids = set()
 
     async def cog_load(self):
-        """Called when the cog is loaded."""
+        """Restore persistent UI components after a restart."""
         self.bot.add_view(ColorPickerView(self))
+        for guild in self.bot.guilds:
+            role_ids = await self.config.guild(guild).verify_button_roles()
+            for rid in role_ids:
+                if guild.get_role(rid):
+                    self._register_verify_view(rid)
+            menus = await self.config.guild(guild).role_menus()
+            for mid_str, data in list(menus.items()):
+                try:
+                    mid = int(mid_str)
+                    roles = data.get("roles") or []
+                    ch_id = data.get("channel_id")
+                    if ch_id and guild.get_channel(ch_id) and roles:
+                        self._register_role_menu_view(guild, mid, roles, view=None)
+                except (TypeError, ValueError):
+                    continue
+
+    def _register_verify_view(self, role_id: int) -> None:
+        if role_id in self._verify_view_role_ids:
+            return
+        self._verify_view_role_ids.add(role_id)
+        self.bot.add_view(VerifyView(self, role_id))
+
+    def _register_role_menu_view(
+        self,
+        guild: discord.Guild,
+        message_id: int,
+        role_ids: list,
+        view: Optional["RoleMenuView"] = None,
+    ) -> None:
+        if message_id in self._role_menu_message_ids:
+            return
+        self._role_menu_message_ids.add(message_id)
+        self.bot.add_view(view or RoleMenuView(self, guild, message_id, role_ids))
 
     async def red_delete_data_for_user(self, **kwargs):
-        """Nothing to delete."""
-        return
+        """Remove stored leveling XP for this user in every guild the bot is in."""
+        user_id = kwargs.get("user_id")
+        if user_id is None:
+            return
+        for guild in self.bot.guilds:
+            await self.config.member_from_ids(guild.id, user_id).clear()
+
+    async def _maybe_award_xp(self, message: discord.Message) -> None:
+        if not message.guild or message.author.bot:
+            return
+        guild = message.guild
+        settings = await self.config.guild(guild).all()
+        if not settings["leveling_enabled"]:
+            return
+        if message.channel.id in (settings["leveling_ignored_channels"] or []):
+            return
+        member = message.author
+        if not isinstance(member, discord.Member):
+            return
+        ignored_roles = set(settings["leveling_ignored_roles"] or [])
+        if ignored_roles and ignored_roles.intersection({r.id for r in member.roles}):
+            return
+
+        import time
+        import random
+
+        now = time.time()
+        cd = max(5, int(settings["leveling_cooldown"]))
+        last = self._level_cooldown[guild.id].get(member.id, 0.0)
+        if now - last < cd:
+            return
+        self._level_cooldown[guild.id][member.id] = now
+
+        lo = min(int(settings["leveling_xp_min"]), int(settings["leveling_xp_max"]))
+        hi = max(int(settings["leveling_xp_min"]), int(settings["leveling_xp_max"]))
+        gain = random.randint(lo, hi)
+        cur = await self.config.member(member).xp()
+        await self.config.member(member).xp.set(cur + gain)
+
+    async def _get_or_create_muted_role(self, guild: discord.Guild) -> discord.Role:
+        muted_role = discord.utils.get(guild.roles, name="Muted")
+        if muted_role:
+            return muted_role
+        muted_role = await guild.create_role(name="Muted", reason="ServerAssistant mute role")
+        for ch in guild.channels:
+            try:
+                await ch.set_permissions(muted_role, send_messages=False, speak=False)
+            except discord.Forbidden:
+                pass
+        return muted_role
+
+    async def _delayed_remove_muted_role(
+        self, guild: discord.Guild, member_id: int, muted_role: discord.Role, duration: int
+    ) -> None:
+        await asyncio.sleep(duration)
+        try:
+            member = guild.get_member(member_id)
+            if member is None:
+                try:
+                    member = await guild.fetch_member(member_id)
+                except discord.NotFound:
+                    return
+            if muted_role in member.roles:
+                await member.remove_roles(muted_role, reason="Timed mute expired")
+            await self._log_action(guild, f"[Mute] {member} — timed mute ({duration}s) expired.")
+        except discord.Forbidden:
+            await self._log_action(guild, f"[Mute] Could not remove Muted from <@{member_id}> — missing permissions.")
+        except Exception as e:
+            await self._log_action(guild, f"[Mute] Timed unmute error for <@{member_id}>: {e}")
+
+    @staticmethod
+    async def _apply_text_lock(channel: discord.abc.GuildChannel, guild: discord.Guild, locked: bool) -> None:
+        if isinstance(channel, discord.TextChannel):
+            await channel.set_permissions(
+                guild.default_role,
+                send_messages=False if locked else None,
+            )
+        elif isinstance(channel, discord.ForumChannel):
+            try:
+                await channel.set_permissions(
+                    guild.default_role,
+                    send_messages=False if locked else None,
+                    create_public_threads=False if locked else None,
+                )
+            except TypeError:
+                await channel.set_permissions(
+                    guild.default_role,
+                    send_messages=False if locked else None,
+                )
 
     @commands.hybrid_group(invoke_without_command=True, fallback="help")
     async def serverassistant(self, ctx):
-        """Base command for the ServerAssistant cog."""
+        """ServerAssistant: moderation, automation, and server info (see subcommands)."""
+        p = ctx.clean_prefix
         help_message = discord.Embed(
-            title="ServerAssistant Commands",
-            description="Helpful commands for managing your Discord server.",
-            color=0x00ff00
+            title="ServerAssistant",
+            description=(
+                f"Prefix **`{p}`** or slash **`/serverassistant`** — same commands where marked hybrid.\n"
+                "**Tip:** Set `{0}serverassistant log set #channel` so kicks, bans, verification, and anti-spam are recorded."
+            ).format(p),
+            color=discord.Color.blurple(),
         )
-        help_message.add_field(name="[p]serverassistant createcolorroles", value="Create a set of predefined color roles.", inline=False)
-        help_message.add_field(name="[p]serverassistant channelmap", value="Generate a mind map of your server's channels.", inline=False)
-        help_message.add_field(name="[p]serverassistant autorole set @role", value="Set a role to auto-assign to new members.", inline=False)
-        help_message.add_field(name="[p]serverassistant announce #channel message", value="Send an announcement to a channel.", inline=False)
-        help_message.add_field(name="[p]serverassistant poll 'Question?' 'Option1' 'Option2'", value="Create a poll.", inline=False)
-        help_message.add_field(name="[p]serverassistant userinfo @user", value="Show info about a user.", inline=False)
-        help_message.add_field(name="[p]serverassistant roleinfo RoleName", value="Show info about a role.", inline=False)
-        help_message.add_field(name="[p]serverassistant serverstats", value="Show server statistics.", inline=False)
-        help_message.add_field(name="[p]serverassistant kick/ban/mute/unmute/warn/purge", value="Moderation tools.", inline=False)
-        help_message.add_field(name="[p]serverassistant log set #channel", value="Set a channel for logging moderation actions.", inline=False)
-        help_message.add_field(name="[p]serverassistant verifybutton", value="Send a verification button message.", inline=False)
-        help_message.add_field(name="[p]serverassistant antispam", value="Configure anti-spam protection.", inline=False)
+        help_message.add_field(
+            name="Moderation & channels",
+            value=(
+                f"`{p}serverassistant kick` / `ban` / `mute` / `unmute` / `warn` / `purge` — usual Discord perms.\n"
+                f"`{p}serverassistant mute @user 10m reason` — timed mute (timeout if possible, else **Muted** role).\n"
+                f"`{p}serverassistant slowmode set 30` — optional `#channel`; `{p}serverassistant lock` / `unlock` (text/forum).\n"
+                f"`{p}serverassistant lockcategory` / `unlockcategory` — bulk lock under a category.\n"
+                f"`{p}serverassistant log` — `set` / `clear` mod log channel."
+            ),
+            inline=False,
+        )
+        help_message.add_field(
+            name="Automation & safety",
+            value=(
+                f"`{p}serverassistant antispam` — view settings; subcommands: `enable`, `disable`, `limit`, `window`, `action`, `mutetime`.\n"
+                f"`{p}serverassistant autorole` — `set` / `clear`; assigns a role on join.\n"
+                f"`{p}serverassistant verifybutton` — posts a **persistent** Verify button (role optional; defaults to **Verified**)."
+            ),
+            inline=False,
+        )
+        help_message.add_field(
+            name="Appearance & engagement",
+            value=(
+                f"`{p}serverassistant announce` / `announceembed` — plain or embed (+ optional `@here` / `@everyone`).\n"
+                f"`{p}serverassistant poll` — up to 10 options.\n"
+                f"`{p}serverassistant createcolorroles` + `colorpicker setup` — color roles.\n"
+                f"`{p}serverassistant level` — XP card; `level enable`, `leaderboard`, `xprange`, `cooldown`, `ignorechannel`…\n"
+                f"`{p}serverassistant starboard set #channel` — `minimum`, `emoji`, `selfstar`; ⭐ reposts.\n"
+                f"`{p}serverassistant reactionrole add` (message + emoji + role) — classic reaction roles.\n"
+                f"`{p}serverassistant rolemenu send` — **prefix** multi-select role menu (max 25 roles)."
+            ),
+            inline=False,
+        )
+        help_message.add_field(
+            name="Information",
+            value=(
+                f"`{p}serverassistant userinfo` · `roleinfo` · `serverstats` · `channelmap` — who/what/where overview."
+            ),
+            inline=False,
+        )
+        help_message.set_footer(
+            text="Anti-spam mutes use a role named “Muted” (created if missing). Bot needs Manage Roles and channel perms as needed."
+        )
         await ctx.send(embed=help_message)
 
     # --- Anti-Spam ---
@@ -162,11 +401,12 @@ class ServerAssistant(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message):
-        """Monitor messages for spam."""
+        """Award leveling XP and monitor messages for spam."""
         if not message.guild:
             return
         if message.author.bot:
             return
+        await self._maybe_award_xp(message)
         if not message.author.guild_permissions.send_messages:
             return
         # Skip if user has manage_messages (moderator)
@@ -217,14 +457,10 @@ class ServerAssistant(commands.Cog):
                 await message.channel.send(f"{member.mention} has been muted for spamming.", delete_after=10)
                 await self._log_action(message.guild, f"[Anti-Spam] {member} was muted for spamming in {message.channel.mention}.")
 
-                # Schedule unmute
                 duration = settings["antispam_mute_duration"]
-                await asyncio.sleep(duration)
-                try:
-                    await member.remove_roles(muted_role, reason="Anti-spam mute expired")
-                    await self._log_action(message.guild, f"[Anti-Spam] {member} was automatically unmuted after {duration}s.")
-                except Exception:
-                    pass
+                asyncio.create_task(
+                    self._antispam_unmute_later(message.guild, member.id, muted_role, duration)
+                )
 
             elif action == "kick":
                 try:
@@ -248,6 +484,36 @@ class ServerAssistant(commands.Cog):
         except Exception as e:
             await self._log_action(message.guild, f"[Anti-Spam] Error handling spam from {member}: {e}")
 
+    async def _antispam_unmute_later(
+        self,
+        guild: discord.Guild,
+        member_id: int,
+        muted_role: discord.Role,
+        duration: int,
+    ):
+        """Schedule outside ``on_message`` so the listener is not blocked for the whole mute duration."""
+        await asyncio.sleep(duration)
+        try:
+            member = guild.get_member(member_id)
+            if member is None:
+                try:
+                    member = await guild.fetch_member(member_id)
+                except discord.NotFound:
+                    return
+            if muted_role in member.roles:
+                await member.remove_roles(muted_role, reason="Anti-spam mute expired")
+            await self._log_action(
+                guild,
+                f"[Anti-Spam] {member} was automatically unmuted after {duration}s.",
+            )
+        except discord.Forbidden:
+            await self._log_action(
+                guild,
+                f"[Anti-Spam] Could not auto-unmute <@{member_id}> — missing permissions.",
+            )
+        except Exception as e:
+            await self._log_action(guild, f"[Anti-Spam] Auto-unmute error for <@{member_id}>: {e}")
+
     # --- Role Button Verification ---
     @serverassistant.command(name="verifybutton")
     @commands.has_permissions(manage_roles=True)
@@ -266,6 +532,13 @@ class ServerAssistant(commands.Cog):
         )
         view = VerifyView(self, role.id)
         await channel.send(embed=embed, view=view)
+
+        ids = await self.config.guild(ctx.guild).verify_button_roles()
+        if role.id not in ids:
+            ids = list(ids) + [role.id]
+            await self.config.guild(ctx.guild).verify_button_roles.set(ids)
+        self._register_verify_view(role.id)
+
         await ctx.send(f"Verification message sent to {channel.mention}.")
 
     # --- Autorole ---
@@ -305,9 +578,141 @@ class ServerAssistant(commands.Cog):
     @serverassistant.command()
     @commands.has_permissions(manage_messages=True)
     async def announce(self, ctx, channel: discord.TextChannel, *, message: str):
-        """Send an announcement to a channel."""
+        """Send a plain-text announcement to a channel."""
         await channel.send(message)
         await ctx.send(f"Announcement sent to {channel.mention}")
+
+    @serverassistant.command(name="announceembed")
+    @commands.has_permissions(manage_messages=True)
+    @app_commands.describe(
+        channel="Where to post",
+        title="Embed title",
+        description="Embed body text",
+        ping_here="Include @here",
+        ping_everyone="Include @everyone (use sparingly)",
+        color_hex="Optional color like #5865F2 or 5865F2",
+    )
+    async def announce_embed(
+        self,
+        ctx,
+        channel: discord.TextChannel,
+        title: str,
+        description: str,
+        ping_here: bool = False,
+        ping_everyone: bool = False,
+        color_hex: Optional[str] = None,
+    ):
+        """Post a rich embed announcement; optional @here / @everyone in the same message."""
+        color = discord.Color.blurple()
+        if color_hex:
+            hx = color_hex.strip().lstrip("#")
+            if len(hx) == 6 and all(c in "0123456789abcdefABCDEF" for c in hx):
+                color = discord.Color(int(hx, 16))
+        embed = discord.Embed(title=title, description=description, color=color, timestamp=datetime.now(timezone.utc))
+        embed.set_footer(text=f"Announced by {ctx.author}", icon_url=ctx.author.display_avatar.url)
+        parts = []
+        if ping_here:
+            parts.append("@here")
+        if ping_everyone:
+            parts.append("@everyone")
+        content = " ".join(parts) if parts else None
+        allow_everyone_mentions = ping_everyone or ping_here
+        await channel.send(
+            content=content,
+            embed=embed,
+            allowed_mentions=discord.AllowedMentions(
+                everyone=allow_everyone_mentions,
+                roles=False,
+                users=False,
+            ),
+        )
+        await ctx.send(f"Embed announcement sent to {channel.mention}.")
+
+    # --- Slowmode ---
+    @serverassistant.hybrid_group(name="slowmode", invoke_without_command=True, fallback="show")
+    @commands.has_permissions(manage_channels=True)
+    async def slowmode(self, ctx, channel: Optional[discord.TextChannel] = None):
+        """View or set channel slowmode (0–21600 seconds)."""
+        channel = channel or ctx.channel
+        if not isinstance(channel, discord.TextChannel):
+            await ctx.send("Use this in a text channel or pass a text channel.")
+            return
+        await ctx.send(f"Slowmode in {channel.mention} is **{channel.slowmode_delay}** seconds.")
+
+    @slowmode.command(name="set")
+    @commands.has_permissions(manage_channels=True)
+    @app_commands.describe(channel="Text channel (defaults to current)", seconds="Delay in seconds; 0 turns slowmode off")
+    async def slowmode_set(
+        self,
+        ctx,
+        seconds: commands.Range[int, 0, 21600],
+        channel: Optional[discord.TextChannel] = None,
+    ):
+        """Set slowmode delay for a text channel."""
+        channel = channel or ctx.channel
+        if not isinstance(channel, discord.TextChannel):
+            await ctx.send("Target must be a text channel.")
+            return
+        await channel.edit(slowmode_delay=seconds)
+        await ctx.send(f"Slowmode for {channel.mention} set to **{seconds}s**.")
+        await self._log_action(ctx.guild, f"{ctx.author} set slowmode to {seconds}s in {channel.mention}.")
+
+    # --- Lock / unlock ---
+    @serverassistant.command()
+    @commands.has_permissions(manage_channels=True)
+    @app_commands.describe(channel="Text or forum channel (defaults to here)")
+    async def lock(self, ctx, channel: Optional[Union[discord.TextChannel, discord.ForumChannel]] = None):
+        """Stop @everyone from sending messages in this text (or forum) channel."""
+        channel = channel or ctx.channel
+        if not isinstance(channel, (discord.TextChannel, discord.ForumChannel)):
+            await ctx.send("Lock only applies to text or forum channels.")
+            return
+        await self._apply_text_lock(channel, ctx.guild, True)
+        await ctx.send(f"{channel.mention} is now **locked**.")
+        await self._log_action(ctx.guild, f"{ctx.author} locked {channel.mention}.")
+
+    @serverassistant.command()
+    @commands.has_permissions(manage_channels=True)
+    @app_commands.describe(channel="Text or forum channel (defaults to here)")
+    async def unlock(self, ctx, channel: Optional[Union[discord.TextChannel, discord.ForumChannel]] = None):
+        """Restore default send permissions for @everyone."""
+        channel = channel or ctx.channel
+        if not isinstance(channel, (discord.TextChannel, discord.ForumChannel)):
+            await ctx.send("Unlock only applies to text or forum channels.")
+            return
+        await self._apply_text_lock(channel, ctx.guild, False)
+        await ctx.send(f"{channel.mention} is now **unlocked**.")
+        await self._log_action(ctx.guild, f"{ctx.author} unlocked {channel.mention}.")
+
+    @serverassistant.command(name="lockcategory")
+    @commands.has_permissions(manage_channels=True)
+    async def lock_category(self, ctx, category: discord.CategoryChannel):
+        """Lock all text channels under a category."""
+        n = 0
+        for ch in category.channels:
+            if isinstance(ch, (discord.TextChannel, discord.ForumChannel)):
+                try:
+                    await self._apply_text_lock(ch, ctx.guild, True)
+                    n += 1
+                except discord.Forbidden:
+                    pass
+        await ctx.send(f"Locked **{n}** channel(s) under **{category.name}**.")
+        await self._log_action(ctx.guild, f"{ctx.author} locked category **{category.name}** ({n} channels).")
+
+    @serverassistant.command(name="unlockcategory")
+    @commands.has_permissions(manage_channels=True)
+    async def unlock_category(self, ctx, category: discord.CategoryChannel):
+        """Unlock all text channels under a category."""
+        n = 0
+        for ch in category.channels:
+            if isinstance(ch, (discord.TextChannel, discord.ForumChannel)):
+                try:
+                    await self._apply_text_lock(ch, ctx.guild, False)
+                    n += 1
+                except discord.Forbidden:
+                    pass
+        await ctx.send(f"Unlocked **{n}** channel(s) under **{category.name}**.")
+        await self._log_action(ctx.guild, f"{ctx.author} unlocked category **{category.name}** ({n} channels).")
 
     # --- Poll ---
     @serverassistant.command()
@@ -412,8 +817,12 @@ class ServerAssistant(commands.Cog):
             embed.set_footer(text=f"Page {page_num}/{total_pages} — {len(self.bot.guilds)} total servers")
             embeds.append(embed)
 
+        use_ephemeral = ctx.interaction is not None
         for embed in embeds:
-            await ctx.send(embed=embed, ephemeral=True)
+            if use_ephemeral:
+                await ctx.send(embed=embed, ephemeral=True)
+            else:
+                await ctx.send(embed=embed)
 
     # --- Moderation Tools ---
 
@@ -451,23 +860,58 @@ class ServerAssistant(commands.Cog):
 
     @serverassistant.command()
     @commands.has_permissions(manage_roles=True)
-    async def mute(self, ctx, member: discord.Member, *, reason: str = None):
-        """Mute a member (adds Muted role)."""
+    @app_commands.describe(
+        member="Member to mute",
+        reason="Optional: start with a duration like `10m`, `2h`, `1d` then the rest is the reason",
+    )
+    async def mute(self, ctx, member: discord.Member, *, reason: str = ""):
+        """Mute a member. Put a duration first for a timed mute (e.g. ``5m spam``). Uses Discord timeout when possible."""
         if member.top_role >= ctx.author.top_role and ctx.author != ctx.guild.owner:
             await ctx.send("You cannot mute someone with an equal or higher role.")
             return
-        muted_role = discord.utils.get(ctx.guild.roles, name="Muted")
-        if not muted_role:
-            muted_role = await ctx.guild.create_role(name="Muted", reason="Mute command used")
-            for channel in ctx.guild.channels:
-                try:
-                    await channel.set_permissions(muted_role, send_messages=False, speak=False)
-                except discord.Forbidden:
-                    pass
+        duration_sec, rest_reason = _split_mute_reason(reason)
+        audit_reason = rest_reason or f"Muted by {ctx.author}"
+
         try:
-            await member.add_roles(muted_role, reason=reason or f"Muted by {ctx.author}")
-            await ctx.send(f"{member} has been muted.")
-            await self._log_action(ctx.guild, f"{member} was muted by {ctx.author}. Reason: {reason or 'No reason provided'}")
+            if duration_sec:
+                td = timedelta(seconds=duration_sec)
+                if td > DISCORD_TIMEOUT_MAX:
+                    td = DISCORD_TIMEOUT_MAX
+                me = ctx.guild.me
+                can_timeout = (
+                    me
+                    and me.guild_permissions.moderate_members
+                    and member.top_role < me.top_role
+                    and ctx.guild.owner_id != member.id
+                )
+                if can_timeout:
+                    await member.timeout(td, reason=audit_reason)
+                    await ctx.send(f"{member.mention} timed out (**{duration_sec}s**, Discord native).")
+                    await self._log_action(
+                        ctx.guild,
+                        f"{member} timed out by {ctx.author} for {duration_sec}s. Reason: {rest_reason or 'None'}",
+                    )
+                    return
+
+            muted_role = await self._get_or_create_muted_role(ctx.guild)
+            await member.add_roles(muted_role, reason=audit_reason)
+            if duration_sec:
+                asyncio.create_task(
+                    self._delayed_remove_muted_role(ctx.guild, member.id, muted_role, duration_sec)
+                )
+                await ctx.send(
+                    f"{member.mention} muted (**Muted** role) for **{duration_sec}s**."
+                )
+                await self._log_action(
+                    ctx.guild,
+                    f"{member} muted by {ctx.author} for {duration_sec}s. Reason: {rest_reason or 'None'}",
+                )
+            else:
+                await ctx.send(f"{member.mention} has been muted (**Muted** role).")
+                await self._log_action(
+                    ctx.guild,
+                    f"{member} muted by {ctx.author}. Reason: {rest_reason or 'None'}",
+                )
         except discord.Forbidden:
             await ctx.send("I don't have permission to mute this member.")
         except Exception as e:
@@ -476,19 +920,25 @@ class ServerAssistant(commands.Cog):
     @serverassistant.command()
     @commands.has_permissions(manage_roles=True)
     async def unmute(self, ctx, member: discord.Member):
-        """Unmute a member (removes Muted role)."""
+        """Remove Muted role and clear Discord timeout if any."""
+        had_timeout = member.communication_disabled_until is not None
         muted_role = discord.utils.get(ctx.guild.roles, name="Muted")
-        if not muted_role:
-            await ctx.send("No Muted role exists.")
+        had_muted_role = muted_role is not None and muted_role in member.roles
+        if not had_timeout and not had_muted_role:
+            await ctx.send("That member has no active timeout and no **Muted** role.")
             return
         try:
-            await member.remove_roles(muted_role, reason=f"Unmuted by {ctx.author}")
-            await ctx.send(f"{member} has been unmuted.")
-            await self._log_action(ctx.guild, f"{member} was unmuted by {ctx.author}.")
-        except discord.Forbidden:
-            await ctx.send("I don't have permission to unmute this member.")
-        except Exception as e:
-            await ctx.send(f"Failed to unmute: {e}")
+            await member.timeout(None)
+        except (discord.Forbidden, discord.HTTPException):
+            pass
+        if had_muted_role:
+            try:
+                await member.remove_roles(muted_role, reason=f"Unmuted by {ctx.author}")
+            except discord.Forbidden:
+                await ctx.send("I couldn't remove the **Muted** role (check hierarchy).")
+                return
+        await ctx.send(f"{member.mention} has been unmuted.")
+        await self._log_action(ctx.guild, f"{member} was unmuted by {ctx.author}.")
 
     @serverassistant.command()
     @commands.has_permissions(manage_messages=True)
@@ -626,6 +1076,437 @@ class ServerAssistant(commands.Cog):
 
         await ctx.send(f"Color picker set up in {channel.mention}!")
 
+    # --- Leveling ---
+    @serverassistant.hybrid_group(name="level", invoke_without_command=True, fallback="show")
+    async def level_cmd(self, ctx, member: Optional[discord.Member] = None):
+        """Show XP / level, or configure leveling (subcommands)."""
+        member = member or ctx.author
+        if member.bot:
+            await ctx.send("Bots don't have levels here.")
+            return
+        xp = await self.config.member(member).xp()
+        lvl, into, span = _xp_progress(xp)
+        low, _ = _xp_band(lvl)
+        next_lvl = lvl + 1
+        embed = discord.Embed(
+            title=f"Level — {member.display_name}",
+            color=member.color if member.color.value else discord.Color.blurple(),
+        )
+        embed.set_thumbnail(url=member.display_avatar.url)
+        embed.add_field(name="Level", value=str(lvl), inline=True)
+        embed.add_field(name="Total XP", value=str(xp), inline=True)
+        embed.add_field(
+            name="Progress to next",
+            value=f"{into} / {span} XP (→ level **{next_lvl}**)",
+            inline=False,
+        )
+        embed.set_footer(text=f"XP floor for current level: {low}")
+        await ctx.send(embed=embed)
+
+    @level_cmd.command(name="leaderboard")
+    async def level_leaderboard(self, ctx):
+        """Top 15 members by XP (cached members only)."""
+        rows = []
+        for m in ctx.guild.members:
+            if m.bot:
+                continue
+            xp_val = await self.config.member(m).xp()
+            if xp_val > 0:
+                rows.append((xp_val, m))
+        rows.sort(key=lambda x: x[0], reverse=True)
+        rows = rows[:15]
+        if not rows:
+            await ctx.send("No XP recorded yet — keep chatting (if leveling is enabled).")
+            return
+        lines = []
+        for i, (xp_val, m) in enumerate(rows, start=1):
+            lines.append(f"**{i}.** {m.display_name} — **Lv {_level_from_xp(xp_val)}** ({xp_val} XP)")
+        embed = discord.Embed(title="Level leaderboard", description="\n".join(lines), color=discord.Color.gold())
+        await ctx.send(embed=embed)
+
+    @level_cmd.command(name="enable")
+    @commands.admin_or_permissions(manage_guild=True)
+    async def level_enable(self, ctx):
+        """Turn on XP from normal messages."""
+        await self.config.guild(ctx.guild).leveling_enabled.set(True)
+        await ctx.send("Leveling **enabled**.")
+
+    @level_cmd.command(name="disable")
+    @commands.admin_or_permissions(manage_guild=True)
+    async def level_disable(self, ctx):
+        """Turn off XP gain."""
+        await self.config.guild(ctx.guild).leveling_enabled.set(False)
+        await ctx.send("Leveling **disabled**.")
+
+    @level_cmd.command(name="xprange")
+    @commands.admin_or_permissions(manage_guild=True)
+    async def level_xprange(self, ctx, minimum: int, maximum: int):
+        """Random XP per eligible message (min–max, inclusive)."""
+        lo, hi = sorted((max(1, minimum), max(1, maximum)))
+        await self.config.guild(ctx.guild).leveling_xp_min.set(lo)
+        await self.config.guild(ctx.guild).leveling_xp_max.set(hi)
+        await ctx.send(f"XP per message set to **{lo}–{hi}**.")
+
+    @level_cmd.command(name="cooldown")
+    @commands.admin_or_permissions(manage_guild=True)
+    async def level_cooldown_cmd(self, ctx, seconds: commands.Range[int, 5, 3600]):
+        """Minimum seconds between XP gains per user."""
+        await self.config.guild(ctx.guild).leveling_cooldown.set(seconds)
+        await ctx.send(f"Leveling cooldown set to **{seconds}s**.")
+
+    @level_cmd.command(name="ignorechannel")
+    @commands.admin_or_permissions(manage_guild=True)
+    async def level_ignore_channel(self, ctx, channel: discord.TextChannel):
+        """No XP in this channel."""
+        ids = list(await self.config.guild(ctx.guild).leveling_ignored_channels())
+        if channel.id not in ids:
+            ids.append(channel.id)
+            await self.config.guild(ctx.guild).leveling_ignored_channels.set(ids)
+        await ctx.send(f"{channel.mention} ignored for XP.")
+
+    @level_cmd.command(name="unignorechannel")
+    @commands.admin_or_permissions(manage_guild=True)
+    async def level_unignore_channel(self, ctx, channel: discord.TextChannel):
+        """Allow XP again in this channel."""
+        ids = [i for i in await self.config.guild(ctx.guild).leveling_ignored_channels() if i != channel.id]
+        await self.config.guild(ctx.guild).leveling_ignored_channels.set(ids)
+        await ctx.send(f"{channel.mention} no longer ignored for XP.")
+
+    @level_cmd.command(name="ignorerole")
+    @commands.admin_or_permissions(manage_guild=True)
+    async def level_ignore_role(self, ctx, role: discord.Role):
+        """Members with this role earn no XP."""
+        ids = list(await self.config.guild(ctx.guild).leveling_ignored_roles())
+        if role.id not in ids:
+            ids.append(role.id)
+            await self.config.guild(ctx.guild).leveling_ignored_roles.set(ids)
+        await ctx.send(f"Role {role.mention} ignored for XP.")
+
+    @level_cmd.command(name="unignorerole")
+    @commands.admin_or_permissions(manage_guild=True)
+    async def level_unignore_role(self, ctx, role: discord.Role):
+        ids = [i for i in await self.config.guild(ctx.guild).leveling_ignored_roles() if i != role.id]
+        await self.config.guild(ctx.guild).leveling_ignored_roles.set(ids)
+        await ctx.send(f"Role {role.mention} no longer ignored for XP.")
+
+    # --- Starboard ---
+    @serverassistant.hybrid_group(name="starboard", invoke_without_command=True, fallback="show")
+    @commands.admin_or_permissions(manage_guild=True)
+    async def starboard_cmd(self, ctx):
+        """Starboard: highlight messages that reach a reaction threshold."""
+        s = await self.config.guild(ctx.guild).all()
+        ch = ctx.guild.get_channel(s["starboard_channel"]) if s["starboard_channel"] else None
+        embed = discord.Embed(title="Starboard settings", color=discord.Color.gold())
+        embed.add_field(name="Channel", value=ch.mention if ch else "Not set", inline=True)
+        embed.add_field(name="Minimum", value=str(s["starboard_min"]), inline=True)
+        embed.add_field(name="Emoji", value=s["starboard_emoji"], inline=True)
+        embed.add_field(
+            name="Ignore self-star",
+            value="Yes" if s["starboard_ignore_self"] else "No",
+            inline=True,
+        )
+        embed.set_footer(text="Use: set, disable, minimum, emoji, selfstar")
+        await ctx.send(embed=embed)
+
+    @starboard_cmd.command(name="set")
+    @commands.admin_or_permissions(manage_guild=True)
+    async def starboard_set(self, ctx, channel: discord.TextChannel):
+        """Posts will be copied/reposted here when they reach the minimum."""
+        await self.config.guild(ctx.guild).starboard_channel.set(channel.id)
+        await ctx.send(f"Starboard channel set to {channel.mention}.")
+
+    @starboard_cmd.command(name="disable")
+    @commands.admin_or_permissions(manage_guild=True)
+    async def starboard_disable(self, ctx):
+        await self.config.guild(ctx.guild).starboard_channel.set(None)
+        await ctx.send("Starboard **disabled** (channel cleared).")
+
+    @starboard_cmd.command(name="minimum")
+    @commands.admin_or_permissions(manage_guild=True)
+    async def starboard_minimum(self, ctx, count: commands.Range[int, 1, 50]):
+        await self.config.guild(ctx.guild).starboard_min.set(count)
+        await ctx.send(f"Starboard minimum reactions set to **{count}**.")
+
+    @starboard_cmd.command(name="emoji")
+    @commands.admin_or_permissions(manage_guild=True)
+    async def starboard_emoji_cmd(self, ctx, emoji: str):
+        """Unicode emoji or custom format ``name:id`` / ``<:name:id>``."""
+        emoji = emoji.strip()
+        await self.config.guild(ctx.guild).starboard_emoji.set(emoji)
+        await ctx.send(f"Starboard emoji set to {emoji}")
+
+    @starboard_cmd.command(name="selfstar")
+    @commands.admin_or_permissions(manage_guild=True)
+    async def starboard_selfstar(self, ctx, enabled: bool):
+        """Whether the author's own reaction counts toward the minimum."""
+        await self.config.guild(ctx.guild).starboard_ignore_self.set(not enabled)
+        await ctx.send(f"Self-stars **{'count' if enabled else 'do not count'}** toward the minimum.")
+
+    # --- Reaction roles ---
+    @serverassistant.hybrid_group(name="reactionrole", invoke_without_command=True, fallback="list")
+    @commands.admin_or_permissions(manage_roles=True)
+    async def reactionrole(self, ctx):
+        """Map message reactions to roles (classic reaction roles)."""
+        maps = await self.config.guild(ctx.guild).reaction_roles()
+        if not maps:
+            await ctx.send("No reaction-role mappings. Use `add`.")
+            return
+        lines = []
+        for mid, bucket in list(maps.items())[:15]:
+            bits = ", ".join(f"`{k}` → {ctx.guild.get_role(rid) or rid}" for k, rid in bucket.items())
+            lines.append(f"• message `{mid}`\n  {bits}")
+        if len(maps) > 15:
+            lines.append(f"*…and {len(maps) - 15} more*")
+        await ctx.send(embed=discord.Embed(title="Reaction roles", description="\n".join(lines)[:4000] or "—"))
+
+    @reactionrole.command(name="add")
+    @commands.admin_or_permissions(manage_roles=True)
+    async def reactionrole_add(
+        self,
+        ctx,
+        message: discord.Message,
+        emoji: str,
+        role: discord.Role,
+    ):
+        """Add a mapping. The bot will add the same reaction to the message."""
+        try:
+            pe = discord.PartialEmoji.from_str(emoji.strip())
+        except Exception:
+            pe = discord.PartialEmoji(name=emoji.strip())
+        key = _emoji_key(pe)
+        maps = dict(await self.config.guild(ctx.guild).reaction_roles())
+        mid = str(message.id)
+        bucket = dict(maps.get(mid, {}))
+        bucket[key] = role.id
+        maps[mid] = bucket
+        await self.config.guild(ctx.guild).reaction_roles.set(maps)
+        try:
+            await message.add_reaction(pe)
+        except discord.HTTPException:
+            pass
+        await ctx.send(f"Linked {emoji} on [that message]({message.jump_url}) → {role.mention}.")
+
+    @reactionrole.command(name="remove")
+    @commands.admin_or_permissions(manage_roles=True)
+    async def reactionrole_remove(self, ctx, message: discord.Message, emoji: str):
+        try:
+            pe = discord.PartialEmoji.from_str(emoji.strip())
+        except Exception:
+            pe = discord.PartialEmoji(name=emoji.strip())
+        key = _emoji_key(pe)
+        maps = dict(await self.config.guild(ctx.guild).reaction_roles())
+        mid = str(message.id)
+        bucket = dict(maps.get(mid, {}))
+        bucket.pop(key, None)
+        if bucket:
+            maps[mid] = bucket
+        else:
+            maps.pop(mid, None)
+        await self.config.guild(ctx.guild).reaction_roles.set(maps)
+        await ctx.send("Mapping removed for that emoji on that message.")
+
+    @reactionrole.command(name="clear")
+    @commands.admin_or_permissions(manage_roles=True)
+    async def reactionrole_clear(self, ctx, message: discord.Message):
+        maps = dict(await self.config.guild(ctx.guild).reaction_roles())
+        maps.pop(str(message.id), None)
+        await self.config.guild(ctx.guild).reaction_roles.set(maps)
+        await ctx.send("All reaction roles cleared for that message.")
+
+    # --- Role menu (select menu) ---
+    @serverassistant.hybrid_group(name="rolemenu", invoke_without_command=True, fallback="help")
+    @commands.admin_or_permissions(manage_roles=True)
+    async def rolemenu(self, ctx):
+        await ctx.send(
+            f"**Role menu** — post a multi-select in a channel:\n"
+            f"`{ctx.clean_prefix}serverassistant rolemenu send #channel \"Title\" @Role1 @Role2 ...` (max 25)\n"
+            f"`{ctx.clean_prefix}serverassistant rolemenu remove <message_id>`"
+        )
+
+    @rolemenu.command(name="send", with_app_command=False)
+    @commands.admin_or_permissions(manage_roles=True)
+    async def rolemenu_send(self, ctx, channel: discord.TextChannel, title: str, roles: commands.Greedy[discord.Role]):
+        """Post a persistent dropdown; members can toggle any of the listed roles."""
+        if not roles or len(roles) > 25:
+            await ctx.send("Provide between **1** and **25** roles after the title.")
+            return
+        me = ctx.guild.me
+        for r in roles:
+            if r >= me.top_role and ctx.author != ctx.guild.owner:
+                await ctx.send(f"I can't assign {r.name} — it's above my top role.")
+                return
+        role_ids = [r.id for r in roles]
+        embed = discord.Embed(
+            title=title,
+            description="Use the menu below to add or remove roles.",
+            color=discord.Color.blurple(),
+        )
+        msg = await channel.send(embed=embed)
+        view = RoleMenuView(self, ctx.guild, msg.id, role_ids)
+        await msg.edit(view=view)
+        menus = dict(await self.config.guild(ctx.guild).role_menus())
+        menus[str(msg.id)] = {"channel_id": channel.id, "roles": role_ids}
+        await self.config.guild(ctx.guild).role_menus.set(menus)
+        self._register_role_menu_view(ctx.guild, msg.id, role_ids, view=view)
+        await ctx.send(f"Role menu posted in {channel.mention}.")
+
+    @rolemenu.command(name="remove")
+    @commands.admin_or_permissions(manage_roles=True)
+    async def rolemenu_remove(self, ctx, message_id: int):
+        """Remove a role menu from config and try to delete its message."""
+        menus = dict(await self.config.guild(ctx.guild).role_menus())
+        key = str(message_id)
+        data = menus.pop(key, None)
+        await self.config.guild(ctx.guild).role_menus.set(menus)
+        self._role_menu_message_ids.discard(message_id)
+        if data:
+            ch = ctx.guild.get_channel(data.get("channel_id"))
+            if ch:
+                try:
+                    m = await ch.fetch_message(message_id)
+                    await m.delete()
+                except Exception:
+                    pass
+        await ctx.send("Role menu removed from config" + (" and message deleted." if data else "."))
+
+    @commands.Cog.listener()
+    async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
+        await self._handle_starboard_raw(payload, added=True)
+        await self._handle_reaction_role_raw(payload, added=True)
+
+    @commands.Cog.listener()
+    async def on_raw_reaction_remove(self, payload: discord.RawReactionActionEvent):
+        await self._handle_starboard_raw(payload, added=False)
+        await self._handle_reaction_role_raw(payload, added=False)
+
+    async def _starboard_emoji_matches(self, guild: discord.Guild, payload: discord.RawReactionActionEvent) -> bool:
+        want = await self.config.guild(guild).starboard_emoji()
+        got = _emoji_key(payload.emoji)
+        try:
+            pe = discord.PartialEmoji.from_str(want.strip())
+            want_key = _emoji_key(pe)
+        except Exception:
+            want_key = want.strip()
+        return got == want_key
+
+    async def _handle_starboard_raw(self, payload: discord.RawReactionActionEvent, *, added: bool) -> None:
+        if not payload.guild_id:
+            return
+        guild = self.bot.get_guild(payload.guild_id)
+        if not guild:
+            return
+        settings = await self.config.guild(guild).all()
+        sb_id = settings["starboard_channel"]
+        if not sb_id:
+            return
+        if payload.channel_id == sb_id:
+            return
+        if not await self._starboard_emoji_matches(guild, payload):
+            return
+        channel = guild.get_channel(payload.channel_id)
+        if not channel or not isinstance(channel, discord.TextChannel):
+            return
+        try:
+            message = await channel.fetch_message(payload.message_id)
+        except discord.HTTPException:
+            return
+        r_obj = None
+        for r in message.reactions:
+            if _emoji_key(r.emoji) == _emoji_key(payload.emoji):
+                r_obj = r
+                break
+        react_count = 0
+        if r_obj:
+            if settings["starboard_ignore_self"]:
+                async for u in r_obj.users(limit=None):
+                    if u.id != message.author.id:
+                        react_count += 1
+            else:
+                react_count = r_obj.count
+        sb_channel = guild.get_channel(sb_id)
+        if not sb_channel or not isinstance(sb_channel, discord.TextChannel):
+            return
+        posts = dict(settings["starboard_posts"] or {})
+        mid_key = str(message.id)
+        min_stars = max(1, int(settings["starboard_min"]))
+
+        if react_count < min_stars:
+            existing_sb_id = posts.get(mid_key)
+            if existing_sb_id:
+                try:
+                    sm = await sb_channel.fetch_message(existing_sb_id)
+                    await sm.delete()
+                except discord.HTTPException:
+                    pass
+                posts.pop(mid_key, None)
+                await self.config.guild(guild).starboard_posts.set(posts)
+            return
+
+        content = message.content[:250] + ("…" if len(message.content) > 250 else "") if message.content else "*No text*"
+        embed = discord.Embed(
+            description=content,
+            color=discord.Color.gold(),
+            timestamp=message.created_at,
+        )
+        embed.set_author(name=str(message.author), icon_url=message.author.display_avatar.url)
+        embed.add_field(name="Source", value=f"[Jump to message]({message.jump_url})", inline=False)
+        if message.attachments and message.attachments[0].content_type and str(message.attachments[0].content_type).startswith("image/"):
+            embed.set_image(url=message.attachments[0].url)
+        embed.set_footer(text=f"{react_count} {settings['starboard_emoji']} · #{channel.name}")
+
+        existing_sb_id = posts.get(mid_key)
+        if existing_sb_id:
+            try:
+                sm = await sb_channel.fetch_message(existing_sb_id)
+                await sm.edit(embed=embed)
+            except discord.HTTPException:
+                try:
+                    sm = await sb_channel.send(embed=embed)
+                    posts[mid_key] = sm.id
+                    await self.config.guild(guild).starboard_posts.set(posts)
+                except discord.HTTPException:
+                    pass
+        else:
+            try:
+                sm = await sb_channel.send(embed=embed)
+                posts[mid_key] = sm.id
+                await self.config.guild(guild).starboard_posts.set(posts)
+            except discord.HTTPException:
+                pass
+
+    async def _handle_reaction_role_raw(self, payload: discord.RawReactionActionEvent, *, added: bool) -> None:
+        if not payload.guild_id or not payload.user_id:
+            return
+        guild = self.bot.get_guild(payload.guild_id)
+        if not guild:
+            return
+        maps = await self.config.guild(guild).reaction_roles()
+        bucket = maps.get(str(payload.message_id))
+        if not bucket:
+            return
+        key = _emoji_key(payload.emoji)
+        role_id = bucket.get(key)
+        if not role_id:
+            return
+        role = guild.get_role(role_id)
+        if not role:
+            return
+        member = guild.get_member(payload.user_id)
+        if not member or member.bot:
+            return
+        me = guild.me
+        if not me or not me.guild_permissions.manage_roles or role >= me.top_role:
+            return
+        try:
+            if added:
+                if role not in member.roles:
+                    await member.add_roles(role, reason="Reaction role")
+            else:
+                if role in member.roles:
+                    await member.remove_roles(role, reason="Reaction role removed")
+        except discord.Forbidden:
+            pass
+
     # --- Channel Map ---
     @serverassistant.command(name="channelmap")
     async def channel_map(self, ctx):
@@ -662,16 +1543,94 @@ class ServerAssistant(commands.Cog):
             await ctx.send(f"```{tree_string}```")
 
 
-class VerifyView(discord.ui.View):
-    """Persistent verification button view."""
+class RoleMenuSelect(discord.ui.Select):
+    """Persistent multi-select; chosen roles are toggled against the member."""
 
-    def __init__(self, cog, role_id):
+    def __init__(self, cog: "ServerAssistant", guild: discord.Guild, message_id: int, role_ids: list):
+        self.cog = cog
+        self.message_id = message_id
+        opts = []
+        for rid in role_ids[:25]:
+            role = guild.get_role(rid)
+            opts.append(
+                discord.SelectOption(
+                    label=(role.name if role else f"Deleted ({rid})")[:100],
+                    value=str(rid),
+                )
+            )
+        mx = len(opts)
+        super().__init__(
+            placeholder="Add/remove roles…",
+            min_values=0,
+            max_values=mx,
+            options=opts,
+            custom_id=f"serverassistant_rm_{message_id}",
+        )
+
+    async def callback(self, interaction: discord.Interaction):
+        guild = interaction.guild
+        member = interaction.user
+        if not isinstance(member, discord.Member):
+            await interaction.response.send_message("Use this in the server.", ephemeral=True)
+            return
+        mid = str(interaction.message.id)
+        menus = await self.cog.config.guild(guild).role_menus()
+        data = menus.get(mid)
+        if not data:
+            await interaction.response.send_message("This menu is no longer active.", ephemeral=True)
+            return
+        configured = set(data.get("roles") or [])
+        selected = {int(x) for x in self.values}
+        have = {r.id for r in member.roles} & configured
+        to_add = selected - have
+        to_remove = have - selected
+        me = guild.me
+        if not me or not me.guild_permissions.manage_roles:
+            await interaction.response.send_message("I can't manage roles here.", ephemeral=True)
+            return
+        roles_add = [guild.get_role(r) for r in to_add]
+        roles_rem = [guild.get_role(r) for r in to_remove]
+        roles_add = [x for x in roles_add if x and x < me.top_role]
+        roles_rem = [x for x in roles_rem if x and x < me.top_role]
+        try:
+            if roles_add:
+                await member.add_roles(*roles_add, reason="Role menu")
+            if roles_rem:
+                await member.remove_roles(*roles_rem, reason="Role menu")
+            await interaction.response.send_message("Your roles were updated.", ephemeral=True)
+        except discord.Forbidden:
+            await interaction.response.send_message("I couldn't change those roles (check hierarchy).", ephemeral=True)
+
+
+class RoleMenuView(discord.ui.View):
+    def __init__(self, cog: "ServerAssistant", guild: discord.Guild, message_id: int, role_ids: list):
+        super().__init__(timeout=None)
+        self.cog = cog
+        self.message_id = message_id
+        self.add_item(RoleMenuSelect(cog, guild, message_id, role_ids))
+
+
+class VerifyView(discord.ui.View):
+    """Persistent verification button; ``custom_id`` includes the role id so restarts keep working."""
+
+    def __init__(self, cog, role_id: int):
         super().__init__(timeout=None)
         self.cog = cog
         self.role_id = role_id
+        self.add_item(VerifyRoleButton(cog, role_id))
 
-    @discord.ui.button(label="Verify", style=discord.ButtonStyle.success, custom_id="serverassistant_verify")
-    async def verify_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+
+class VerifyRoleButton(discord.ui.Button):
+    def __init__(self, cog: "ServerAssistant", role_id: int):
+        super().__init__(
+            label="Verify",
+            style=discord.ButtonStyle.success,
+            custom_id=f"serverassistant_verify_{role_id}",
+        )
+        self.cog = cog
+        self.role_id = role_id
+
+    async def callback(self, interaction: discord.Interaction):
         member = interaction.user
         role = member.guild.get_role(self.role_id)
         if not role:
@@ -683,18 +1642,19 @@ class VerifyView(discord.ui.View):
         try:
             await member.add_roles(role, reason="Verified via button")
             await interaction.response.send_message(f"You have been verified and given the {role.mention} role!", ephemeral=True)
-            # Try to DM the user
             try:
                 await member.send(f"You have been verified in **{member.guild.name}**! Welcome!")
             except discord.Forbidden:
                 pass
-            # Log the verification
             log_channel_id = await self.cog.config.guild(member.guild).log_channel()
             if log_channel_id:
                 log_channel = member.guild.get_channel(log_channel_id)
                 if log_channel:
                     try:
-                        await log_channel.send(f"[Verification] {member.mention} ({member.id}) verified at {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}.")
+                        await log_channel.send(
+                            f"[Verification] {member.mention} ({member.id}) verified at "
+                            f"{datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}."
+                        )
                     except discord.Forbidden:
                         pass
         except discord.Forbidden:
