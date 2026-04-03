@@ -330,7 +330,7 @@ class ServerAssistant(commands.Cog):
         await ctx.send(embed=help_message)
 
     # --- Anti-Spam ---
-    @serverassistant.hybrid_group(invoke_without_command=True, fallback="show")
+    @serverassistant.group(invoke_without_command=True, fallback="show")
     @commands.admin_or_permissions(manage_guild=True)
     async def antispam(self, ctx):
         """Configure anti-spam settings."""
@@ -542,7 +542,7 @@ class ServerAssistant(commands.Cog):
         await ctx.send(f"Verification message sent to {channel.mention}.")
 
     # --- Autorole ---
-    @serverassistant.hybrid_group(invoke_without_command=True, fallback="show")
+    @serverassistant.group(invoke_without_command=True, fallback="show")
     async def autorole(self, ctx):
         """Auto role assignment settings."""
         role_id = await self.config.guild(ctx.guild).autorole()
@@ -629,7 +629,7 @@ class ServerAssistant(commands.Cog):
         await ctx.send(f"Embed announcement sent to {channel.mention}.")
 
     # --- Slowmode ---
-    @serverassistant.hybrid_group(name="slowmode", invoke_without_command=True, fallback="show")
+    @serverassistant.group(name="slowmode", invoke_without_command=True, fallback="show")
     @commands.has_permissions(manage_channels=True)
     async def slowmode(self, ctx, channel: Optional[discord.TextChannel] = None):
         """View or set channel slowmode (0–21600 seconds)."""
@@ -982,7 +982,7 @@ class ServerAssistant(commands.Cog):
                     pass
 
     # --- Logging ---
-    @serverassistant.hybrid_group(invoke_without_command=True, fallback="show")
+    @serverassistant.group(invoke_without_command=True, fallback="show")
     async def log(self, ctx):
         """Logging settings."""
         log_channel_id = await self.config.guild(ctx.guild).log_channel()
@@ -1034,7 +1034,7 @@ class ServerAssistant(commands.Cog):
             await ctx.send("No roles to create.")
 
     # --- Color Picker ---
-    @serverassistant.hybrid_group(invoke_without_command=True, fallback="show")
+    @serverassistant.group(invoke_without_command=True, fallback="show")
     @commands.has_permissions(manage_roles=True)
     async def colorpicker(self, ctx):
         """Color picker settings."""
@@ -1077,7 +1077,7 @@ class ServerAssistant(commands.Cog):
         await ctx.send(f"Color picker set up in {channel.mention}!")
 
     # --- Leveling ---
-    @serverassistant.hybrid_group(name="level", invoke_without_command=True, fallback="show")
+    @serverassistant.group(name="level", invoke_without_command=True, fallback="show")
     async def level_cmd(self, ctx, member: Optional[discord.Member] = None):
         """Show XP / level, or configure leveling (subcommands)."""
         member = member or ctx.author
@@ -1190,7 +1190,7 @@ class ServerAssistant(commands.Cog):
         await ctx.send(f"Role {role.mention} no longer ignored for XP.")
 
     # --- Starboard ---
-    @serverassistant.hybrid_group(name="starboard", invoke_without_command=True, fallback="show")
+    @serverassistant.group(name="starboard", invoke_without_command=True, fallback="show")
     @commands.admin_or_permissions(manage_guild=True)
     async def starboard_cmd(self, ctx):
         """Starboard: highlight messages that reach a reaction threshold."""
@@ -1243,7 +1243,7 @@ class ServerAssistant(commands.Cog):
         await ctx.send(f"Self-stars **{'count' if enabled else 'do not count'}** toward the minimum.")
 
     # --- Reaction roles ---
-    @serverassistant.hybrid_group(name="reactionrole", invoke_without_command=True, fallback="list")
+    @serverassistant.group(name="reactionrole", invoke_without_command=True, fallback="list")
     @commands.admin_or_permissions(manage_roles=True)
     async def reactionrole(self, ctx):
         """Map message reactions to roles (classic reaction roles)."""
@@ -1314,7 +1314,7 @@ class ServerAssistant(commands.Cog):
         await ctx.send("All reaction roles cleared for that message.")
 
     # --- Role menu (select menu) ---
-    @serverassistant.hybrid_group(name="rolemenu", invoke_without_command=True, fallback="help")
+    @serverassistant.group(name="rolemenu", invoke_without_command=True, fallback="help")
     @commands.admin_or_permissions(manage_roles=True)
     async def rolemenu(self, ctx):
         await ctx.send(
