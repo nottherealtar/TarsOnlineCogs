@@ -8,6 +8,24 @@ import math
 import re
 from typing import Optional, Union
 
+# -----------------------------------------------------------------------------
+# Red + discord.py hybrid constraints (check before adding commands)
+#
+# 1. Nesting: only the *root* uses ``@commands.hybrid_group``. Children of that
+#    group must use ``@serverassistant.group(...)`` — ``HybridGroup`` has no
+#    ``.hybrid_group()`` (AttributeError at import otherwise).
+#
+# 2. Slash tree limit: each application-command group may have at most **25**
+#    direct subcommands/subgroups (Discord API). Our root also registers a
+#    ``help`` fallback from ``fallback="help"``, which counts toward that cap.
+#    If loading raises ``ValueError: maximum number of child commands exceeded``,
+#    mark whole groups or heavy commands with ``with_app_command=False`` so they
+#    stay prefix-only, or split into another top-level cog / command group.
+#
+# 3. Runtime: starboard + reaction roles need the reactions intent; persistent
+#    views must be re-registered from ``cog_load`` where applicable.
+# -----------------------------------------------------------------------------
+
 DISCORD_TIMEOUT_MAX = timedelta(days=28)
 
 
@@ -97,6 +115,8 @@ class ServerAssistant(commands.Cog):
 
     Use ``[p]serverassistant`` (or ``/serverassistant``) for a full command list. Admins should set a **log** channel
     and review **antispam** before relying on it in production. Color roles require ``createcolorroles`` before the picker works.
+
+    **Maintainers:** read the module comment above this class before adding nested groups or slash commands (25-child cap, hybrid nesting).
     """
 
     def __init__(self, bot):
