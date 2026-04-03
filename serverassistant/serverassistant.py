@@ -331,8 +331,9 @@ class ServerAssistant(commands.Cog):
                 f"`{p}serverassistant announce` / `announceembed` — plain or embed (+ optional `@here` / `@everyone`).\n"
                 f"`{p}serverassistant poll` — up to 10 options.\n"
                 f"`{p}serverassistant createcolorroles` + `colorpicker setup` — color roles.\n"
-                f"`{p}serverassistant level` — XP card; `level enable`, `leaderboard`, `xprange`, `cooldown`, `ignorechannel`…\n"
-                f"`{p}serverassistant starboard set #channel` — `minimum`, `emoji`, `selfstar`; ⭐ reposts.\n"
+                f"**Members:** `{p}serverassistant rank` (or `level` / `xp`) — your card; `{p}serverassistant rank lb` — top 15.\n"
+                f"`{p}serverassistant stars` — how starboard works + where highlights are posted.\n"
+                f"**Admins (prefix):** `level enable` / `xprange` / … · `starboard set #channel`, `minimum`, `emoji`…\n"
                 f"`{p}serverassistant reactionrole add` (message + emoji + role) — classic reaction roles.\n"
                 f"`{p}serverassistant rolemenu send` — **prefix** multi-select role menu (max 25 roles)."
             ),
@@ -1098,13 +1099,20 @@ class ServerAssistant(commands.Cog):
         await ctx.send(f"Color picker set up in {channel.mention}!")
 
     # --- Leveling ---
-    @serverassistant.group(name="level", invoke_without_command=True, fallback="show", with_app_command=False)
+    @serverassistant.group(
+        name="level",
+        aliases=["rank", "xp", "lvl"],
+        invoke_without_command=True,
+        fallback="show",
+        with_app_command=False,
+    )
     async def level_cmd(self, ctx, member: Optional[discord.Member] = None):
-        """Show XP / level, or configure leveling (subcommands)."""
+        """Show XP / level, or configure leveling (subcommands). Same as ``rank`` / ``xp`` / ``lvl``."""
         member = member or ctx.author
         if member.bot:
             await ctx.send("Bots don't have levels here.")
             return
+        enabled = await self.config.guild(ctx.guild).leveling_enabled()
         xp = await self.config.member(member).xp()
         lvl, into, span = _xp_progress(xp)
         low, _ = _xp_band(lvl)
@@ -1121,12 +1129,15 @@ class ServerAssistant(commands.Cog):
             value=f"{into} / {span} XP (→ level **{next_lvl}**)",
             inline=False,
         )
-        embed.set_footer(text=f"XP floor for current level: {low}")
+        foot = f"XP floor for current level: {low}"
+        if not enabled:
+            foot = "Leveling is **off** in this server (admins: `level enable`). · " + foot
+        embed.set_footer(text=foot)
         await ctx.send(embed=embed)
 
-    @level_cmd.command(name="leaderboard")
+    @level_cmd.command(name="leaderboard", aliases=["lb", "top", "levels"])
     async def level_leaderboard(self, ctx):
-        """Top 15 members by XP (cached members only)."""
+        """Top 15 members by XP. Same as ``lb`` or ``top``."""
         rows = []
         for m in ctx.guild.members:
             if m.bot:
@@ -1137,7 +1148,11 @@ class ServerAssistant(commands.Cog):
         rows.sort(key=lambda x: x[0], reverse=True)
         rows = rows[:15]
         if not rows:
-            await ctx.send("No XP recorded yet — keep chatting (if leveling is enabled).")
+            on = await self.config.guild(ctx.guild).leveling_enabled()
+            await ctx.send(
+                "No XP recorded yet."
+                + (" Leveling is **off** — an admin can run `level enable`." if not on else " Chat in the server to earn XP!")
+            )
             return
         lines = []
         for i, (xp_val, m) in enumerate(rows, start=1):
@@ -1262,6 +1277,33 @@ class ServerAssistant(commands.Cog):
         """Whether the author's own reaction counts toward the minimum."""
         await self.config.guild(ctx.guild).starboard_ignore_self.set(not enabled)
         await ctx.send(f"Self-stars **{'count' if enabled else 'do not count'}** toward the minimum.")
+
+    @serverassistant.command(name="stars", with_app_command=False)
+    async def stars_info(self, ctx):
+        """Explain starboard for everyone: where highlights go and how they work."""
+        s = await self.config.guild(ctx.guild).all()
+        ch = ctx.guild.get_channel(s["starboard_channel"]) if s["starboard_channel"] else None
+        emoji = s["starboard_emoji"]
+        need = max(1, int(s["starboard_min"]))
+        ignore_self = s["starboard_ignore_self"]
+
+        if not ch:
+            await ctx.send(
+                "This server doesn’t have a **starboard** channel set up yet. "
+                "When an admin configures it, fun messages can be highlighted when enough people react."
+            )
+            return
+
+        desc = (
+            f"React with **{emoji}** on messages you like. When **{need}** people have reacted"
+            + (" (not counting the author’s own reaction)" if ignore_self else "")
+            + f", a copy is posted in {ch.mention} with a link back to the original.\n\n"
+            f"No command needed — just use reactions in normal channels."
+        )
+        embed = discord.Embed(title="Starboard — how it works", description=desc, color=discord.Color.gold())
+        embed.add_field(name="Highlights channel", value=ch.mention, inline=True)
+        embed.add_field(name="Reaction needed", value=str(emoji), inline=True)
+        await ctx.send(embed=embed)
 
     # --- Reaction roles ---
     @serverassistant.group(name="reactionrole", invoke_without_command=True, fallback="list", with_app_command=False)
