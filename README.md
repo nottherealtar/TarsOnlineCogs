@@ -24,6 +24,7 @@ This is a collection of cogs that I have made over time, some of them are just f
 ### Server Utilities
 | Cog | Description | Status |
 |-----|-------------|--------|
+| `gamedatemate` | Game Date Mate: forward Discord presence to your web app (hybrid `/gamedatemate` setup) | ![Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen) |
 | `cafewelcome` | Generates ASCII-themed welcome GIFs for new members | ![Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen) |
 | `coffeeinfo` | Display server stats in auto-updating voice channels | ![Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen) |
 | `coffeestatus` | Manage the bot's presence and activity status | ![Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen) |
@@ -61,6 +62,7 @@ This is a collection of cogs that I have made over time, some of them are just f
 
 > ## Requirements
 Some cogs have additional requirements that will be installed automatically:
+- `gamedatemate` - aiohttp
 - `cafewelcome` - numpy, pillow
 - `howcracked` - pillow
 - `teachme` - aiohttp
