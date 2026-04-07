@@ -5,7 +5,7 @@
     "install_msg": "Run `/gamedatemate guide` (or `[p]gamedatemate guide`) first. Your bot needs **Presence** + **Server Members** intents (Discord Developer Portal and `[p]set intents` on Red).",
     "name": "GameDateMate",
     "short": "Sync Discord presence to the Game Date Mate web app",
-    "description": "Forwards member presence (and voice join/leave) to your deployed Game Date Mate app via POST /api/discord/presence. Per-guild URL, webhook secret, and enable toggle. Includes setup guide, status, and connection test.",
+    "description": "Forwards member presence, rich presence (RPC details/state/party), all activities, nicknames, and voice channel names to your Game Date Mate app via POST /api/discord/presence. Per-guild URL, webhook secret, and enable toggle.",
     "min_bot_version": "3.5.0",
     "requirements": ["aiohttp"],
     "tags": [

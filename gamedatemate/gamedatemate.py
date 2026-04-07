@@ -1,16 +1,21 @@
 """
 Game Date Mate — forwards Discord presence to the Game Date Mate web app (Red-DiscordBot cog).
+
+Sends rich presence (RPC details/state/party/timestamps/assets), all activity summaries,
+guild nickname + username, and voice channel name so the web UI stays accurate.
 """
 
 from __future__ import annotations
 
 import logging
-from typing import Optional
+from datetime import datetime, timezone
+from typing import Any, Optional
 from urllib.parse import urlparse
 
 import aiohttp
 import discord
 from redbot.core import Config, commands
+from redbot.core.bot import Red
 
 log = logging.getLogger("red.nottherealtar.gamedatemate")
 
@@ -27,35 +32,187 @@ def _normalize_base_url(url: str) -> str:
     return f"{parsed.scheme}://{parsed.netloc}"
 
 
-def _activity_payload(activity: Optional[discord.BaseActivity]) -> tuple[Optional[str], Optional[str], Optional[str]]:
+def _safe_url(prop_getter, max_len: int = 2048) -> Optional[str]:
+    try:
+        u = prop_getter()
+        if not u:
+            return None
+        s = str(u).strip()
+        return s[:max_len] if s else None
+    except Exception:
+        return None
+
+
+def _pick_primary_activity(member: discord.Member) -> Optional[discord.BaseActivity]:
+    """Prefer playing/streaming/competing (game + RPC), then custom status, else first activity."""
+    acts = list(member.activities or [])
+    if not acts:
+        return None
+    priority = (
+        discord.ActivityType.playing,
+        discord.ActivityType.streaming,
+        discord.ActivityType.competing,
+    )
+    for t in priority:
+        for a in acts:
+            if getattr(a, "type", None) == t:
+                return a
+    for a in acts:
+        if getattr(a, "type", None) == discord.ActivityType.custom:
+            return a
+    return acts[0]
+
+
+def _activity_display(activity: Optional[discord.BaseActivity]) -> tuple[Optional[str], Optional[str], Optional[str]]:
+    """Human label, ActivityType name, large art URL (game / rich presence asset)."""
     if activity is None:
         return None, None, None
-    name = getattr(activity, "name", None) or None
     atype = getattr(activity, "type", None)
     type_str = atype.name.upper() if atype is not None and hasattr(atype, "name") else None
-    game_image = None
-    if hasattr(activity, "large_image_url"):
+    name = getattr(activity, "name", None) or None
+
+    if atype == discord.ActivityType.custom and name:
+        label = name
+    elif atype == discord.ActivityType.listening and name:
+        label = f"Listening to {name}"
+    elif atype == discord.ActivityType.watching and name:
+        label = f"Watching {name}"
+    elif atype == discord.ActivityType.streaming and name:
+        label = f"Streaming {name}"
+    elif name:
+        label = name
+    else:
+        label = type_str.replace("_", " ").title() if type_str else None
+
+    game_image = _safe_url(lambda: getattr(activity, "large_image_url", None))
+
+    return label, type_str, game_image
+
+
+def _party_to_rpc(party: Any) -> tuple[Optional[int], Optional[int]]:
+    if party is None:
+        return None, None
+    if isinstance(party, (list, tuple)) and len(party) >= 2:
         try:
-            game_image = activity.large_image_url  # type: ignore[union-attr]
-        except Exception:
-            game_image = None
-    return name, type_str, game_image
+            return int(party[0]), int(party[1])
+        except (TypeError, ValueError):
+            return None, None
+    size = getattr(party, "size", None)
+    if isinstance(size, (list, tuple)) and len(size) >= 2:
+        try:
+            return int(size[0]), int(size[1])
+        except (TypeError, ValueError):
+            return None, None
+    return None, None
 
 
-def _member_presence_payload(guild: discord.Guild, member: discord.Member) -> dict:
-    activity = member.activity
-    act_name, act_type, game_image = _activity_payload(activity)
+def _dt_iso(dt: Any) -> Optional[str]:
+    if dt is None:
+        return None
+    if isinstance(dt, datetime):
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.isoformat()
+    return None
+
+
+def _rpc_from_activity(activity: Optional[discord.BaseActivity]) -> dict[str, Any]:
+    if activity is None:
+        return {}
+    rpc: dict[str, Any] = {}
+    for attr, key, maxlen in (("details", "details", 600), ("state", "state", 600)):
+        v = getattr(activity, attr, None)
+        if v:
+            rpc[key] = str(v)[:maxlen]
+    pc, pm = _party_to_rpc(getattr(activity, "party", None))
+    if pc is not None and pm is not None and pm > 0:
+        rpc["partyCurrent"] = pc
+        rpc["partyMax"] = pm
+    rpc["startedAt"] = _dt_iso(getattr(activity, "start", None))
+    rpc["endsAt"] = _dt_iso(getattr(activity, "end", None))
+    liu = _safe_url(lambda: getattr(activity, "large_image_url", None))
+    siu = _safe_url(lambda: getattr(activity, "small_image_url", None))
+    if liu:
+        rpc["largeImageUrl"] = liu
+    if siu:
+        rpc["smallImageUrl"] = siu
+    for attr, key, maxlen in (("large_text", "largeText", 200), ("small_text", "smallText", 200)):
+        v = getattr(activity, attr, None)
+        if v:
+            rpc[key] = str(v)[:maxlen]
+    url = getattr(activity, "url", None)
+    if url:
+        rpc["streamUrl"] = str(url).strip()[:2048]
+    emoji = getattr(activity, "emoji", None)
+    if emoji is not None:
+        ed: dict[str, Any] = {"animated": bool(getattr(emoji, "animated", False))}
+        en = getattr(emoji, "name", None)
+        if en:
+            ed["name"] = str(en)[:100]
+        eid = getattr(emoji, "id", None)
+        if eid:
+            ed["id"] = str(eid)
+        rpc["emoji"] = ed
+    return rpc
+
+
+def _activities_summary(member: discord.Member) -> list[dict[str, str]]:
+    out: list[dict[str, str]] = []
+    for a in (member.activities or [])[:8]:
+        t = getattr(getattr(a, "type", None), "name", None) or "unknown"
+        n = getattr(a, "name", None) or ""
+        if not str(n).strip() and not str(t).strip():
+            continue
+        out.append({"type": str(t).upper()[:32], "name": str(n).strip()[:200] or t.upper()})
+    return out
+
+
+def _member_labels(member: discord.Member) -> dict[str, Any]:
+    labels: dict[str, Any] = {
+        "displayName": member.display_name[:100] if member.display_name else None,
+        "userName": member.name[:100] if member.name else None,
+    }
+    gn = getattr(member, "global_name", None)
+    if gn:
+        labels["globalName"] = str(gn)[:100]
+    else:
+        labels["globalName"] = None
+    return labels
+
+
+def _member_presence_payload(guild: discord.Guild, member: discord.Member) -> dict[str, Any]:
+    activity = _pick_primary_activity(member)
+    act_label, act_type, game_image = _activity_display(activity)
     voice_ch = member.voice.channel if member.voice else None
-    return {
+    rpc = _rpc_from_activity(activity)
+    snapshot: dict[str, Any] = {"member": _member_labels(member)}
+    if rpc:
+        snapshot["rpc"] = rpc
+    summary = _activities_summary(member)
+    if summary:
+        snapshot["activitiesSummary"] = summary
+
+    payload: dict[str, Any] = {
         "guildId": str(guild.id),
         "discordUserId": str(member.id),
         "status": member.status.name if member.status else "offline",
-        "activity": act_name,
+        "activity": act_label,
         "activityType": act_type,
         "gameImage": game_image,
         "inVoice": voice_ch is not None,
         "voiceChannelId": str(voice_ch.id) if voice_ch else None,
+        "voiceChannelName": voice_ch.name[:100] if voice_ch and voice_ch.name else None,
+        "discordSnapshot": snapshot,
     }
+    return payload
+
+
+def _member_identity_changed(before: discord.Member, after: discord.Member) -> bool:
+    if before.display_name != after.display_name or before.name != after.name:
+        return True
+    bg = getattr(before, "global_name", None)
+    ag = getattr(after, "global_name", None)
+    return bg != ag
 
 
 class GameDateMate(commands.Cog):
@@ -144,6 +301,15 @@ class GameDateMate(commands.Cog):
             return
         await self._post_presence(guild, member)
 
+    @commands.Cog.listener()
+    async def on_member_update(self, before: discord.Member, after: discord.Member):
+        """Push new nickname / username labels when they change (presence event may not fire)."""
+        if after.guild is None:
+            return
+        if not _member_identity_changed(before, after):
+            return
+        await self._post_presence(after.guild, after)
+
     @commands.hybrid_group(name="gamedatemate", aliases=["gdm"], invoke_without_command=True, fallback="help")
     @commands.guild_only()
     async def gamedatemate(self, ctx: commands.Context):
@@ -183,8 +349,8 @@ class GameDateMate(commands.Cog):
         embed = discord.Embed(
             title="Game Date Mate — setup guide",
             description=(
-                "Link this server to your **Game Date Mate** web app so group members see who is online "
-                "and what they are playing."
+                "Link this server to your **Game Date Mate** web app so group members see who is online, "
+                "what they are playing (including rich presence), and voice channel names."
             ),
             color=discord.Color.blurple(),
         )
@@ -217,7 +383,7 @@ class GameDateMate(commands.Cog):
         )
         embed.add_field(
             name="4. Check it",
-            value="`/gamedatemate status` — then change your game status or join voice; registered members update in the app.",
+            value="`/gamedatemate status` — then change game, rich presence, or join voice; registered members update in the app.",
             inline=False,
         )
         embed.set_footer(text=intent_line)
