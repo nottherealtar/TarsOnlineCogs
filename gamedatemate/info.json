@@ -15,6 +15,6 @@
         "integration",
         "gaming"
     ],
-    "end_user_data_statement": "Stores per-guild app base URL, webhook secret, and enabled flag only.",
+    "end_user_data_statement": "Stores per-guild app base URL, webhook secret, enabled flag, and optional periodic sync interval (minutes).",
     "type": "COG"
 }

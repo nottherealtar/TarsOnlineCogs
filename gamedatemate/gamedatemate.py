@@ -10,12 +10,14 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import time
 from datetime import datetime, timezone
 from typing import Any, Optional
 from urllib.parse import urlparse
 
 import aiohttp
 import discord
+from discord.ext import tasks
 from redbot.core import Config, commands
 from redbot.core.bot import Red
 
@@ -236,18 +238,28 @@ class GameDateMate(commands.Cog):
     def __init__(self, bot: Red):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=9876543210, force_registration=True)
-        self.config.register_guild(enabled=False, app_url="", secret="")
+        self.config.register_guild(
+            enabled=False,
+            app_url="",
+            secret="",
+            # 0 = disable automatic sync; otherwise minutes between DB-scoped syncs per guild.
+            periodic_sync_minutes=15,
+        )
         self._http: Optional[aiohttp.ClientSession] = None
         self._debounce_tasks: dict[str, asyncio.Task] = {}
+        self._last_bulk_sync_mono: dict[int, float] = {}
 
     async def cog_load(self) -> None:
         # One pooled session: avoids new TLS + TCP per presence tick (major reliability win on busy guilds).
         self._http = aiohttp.ClientSession(
             timeout=aiohttp.ClientTimeout(total=15),
-            headers={"User-Agent": "GameDateMate-RedCog/2.0 (+https://github.com/nottherealtar/TarsOnlineCogs)"},
+            headers={"User-Agent": "GameDateMate-RedCog/2.1 (+https://github.com/nottherealtar/TarsOnlineCogs)"},
         )
+        if not self._periodic_sync_tick.is_running():
+            self._periodic_sync_tick.start()
 
     async def cog_unload(self) -> None:
+        self._periodic_sync_tick.cancel()
         for t in list(self._debounce_tasks.values()):
             if not t.done():
                 t.cancel()
@@ -276,6 +288,121 @@ class GameDateMate(commands.Cog):
         url = _normalize_base_url(await self.config.guild(guild).app_url())
         secret = (await self.config.guild(guild).secret() or "").strip()
         return bool(url and secret)
+
+    async def _fetch_sync_target_ids(self, guild: discord.Guild) -> list[str]:
+        """Discord snowflakes (strings) the web app will accept for this linked guild."""
+        if self._http is None or self._http.closed:
+            return []
+        if not await self._guild_ready(guild):
+            return []
+        base = _normalize_base_url(await self.config.guild(guild).app_url())
+        secret = (await self.config.guild(guild).secret() or "").strip()
+        endpoint = f"{base}/api/discord/sync-targets?guildId={guild.id}"
+        try:
+            async with self._http.get(
+                endpoint,
+                headers={"x-gdm-secret": secret},
+            ) as resp:
+                text = await resp.text()
+                if resp.status == 404:
+                    log.warning(
+                        "GameDateMate sync-targets 404 — set this guild id on a group in the web app Settings",
+                    )
+                    return []
+                if resp.status != 200:
+                    log.warning("GameDateMate sync-targets HTTP %s: %s", resp.status, text[:400])
+                    return []
+                data = json.loads(text) if text else {}
+                raw = data.get("discordUserIds")
+                if not isinstance(raw, list):
+                    return []
+                return [str(x).strip() for x in raw if str(x).strip().isdigit()]
+        except aiohttp.ClientError as e:
+            log.warning("GameDateMate sync-targets request failed: %s", e)
+            return []
+        except json.JSONDecodeError:
+            log.warning("GameDateMate sync-targets invalid JSON")
+            return []
+
+    async def _sync_db_linked_members(self, guild: discord.Guild) -> dict[str, int]:
+        """POST presence only for users registered in the web DB for this linked group."""
+        ids = await self._fetch_sync_target_ids(guild)
+        out = {"targets": len(ids), "posted": 0, "http200": 0, "not_in_server": 0, "errors": 0}
+        if not ids:
+            return out
+        try:
+            if not guild.chunked:
+                await guild.chunk(cache=True)
+        except Exception as e:
+            log.warning("GameDateMate sync chunk failed: %s", e)
+        for sid in ids:
+            try:
+                mid = int(sid)
+            except ValueError:
+                continue
+            member = guild.get_member(mid)
+            if member is None:
+                try:
+                    member = await guild.fetch_member(mid)
+                except discord.NotFound:
+                    out["not_in_server"] += 1
+                    await asyncio.sleep(_SYNC_DELAY_S)
+                    continue
+                except discord.HTTPException as e:
+                    log.warning("GameDateMate fetch_member %s: %s", mid, e)
+                    out["errors"] += 1
+                    await asyncio.sleep(_SYNC_DELAY_S)
+                    continue
+            if member.bot:
+                await asyncio.sleep(_SYNC_DELAY_S)
+                continue
+            code, _ = await self._post_presence_now(guild, member)
+            out["posted"] += 1
+            if code == 200:
+                out["http200"] += 1
+            elif code > 0:
+                out["errors"] += 1
+            await asyncio.sleep(_SYNC_DELAY_S)
+        return out
+
+    @tasks.loop(minutes=5)
+    async def _periodic_sync_tick(self) -> None:
+        """Every 5 minutes, consider each enabled guild and run sync if its interval elapsed."""
+        if self._http is None or self._http.closed:
+            return
+        now = time.monotonic()
+        for guild in self.bot.guilds:
+            try:
+                if not await self._guild_ready(guild):
+                    continue
+                interval_m = await self.config.guild(guild).periodic_sync_minutes()
+                if interval_m is None:
+                    interval_m = 15
+                if interval_m <= 0:
+                    continue
+                last = self._last_bulk_sync_mono.get(guild.id, 0.0)
+                if now - last < interval_m * 60:
+                    continue
+                stats = await self._sync_db_linked_members(guild)
+                self._last_bulk_sync_mono[guild.id] = now
+                if stats["targets"] > 0:
+                    log.info(
+                        "GameDateMate periodic sync guild=%s targets=%s posted=%s http200=%s "
+                        "not_in_server=%s",
+                        guild.id,
+                        stats["targets"],
+                        stats["posted"],
+                        stats["http200"],
+                        stats["not_in_server"],
+                    )
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                log.exception("GameDateMate periodic sync failed guild=%s", guild.id)
+
+    @_periodic_sync_tick.before_loop
+    async def _periodic_sync_tick_before(self) -> None:
+        await self.bot.wait_until_ready()
 
     async def _post_presence_now(self, guild: discord.Guild, member: discord.Member) -> tuple[int, str]:
         """Send one payload; returns (status_code, response_snippet)."""
@@ -408,7 +535,8 @@ class GameDateMate(commands.Cog):
                 f"`{p}gamedatemate status` — config + intents\n"
                 f"`{p}gamedatemate test` — reachability check\n"
                 f"`{p}gamedatemate push` — send **your** presence now (see API reply)\n"
-                f"`{p}gamedatemate sync` — backfill **all** cached members (admin)"
+                f"`{p}gamedatemate sync` — backfill **web-linked** members only (admin)\n"
+                f"`{p}gamedatemate interval` — auto-sync cadence in minutes (`0` = off)"
             ),
             inline=False,
         )
@@ -462,7 +590,11 @@ class GameDateMate(commands.Cog):
         )
         embed.add_field(
             name="4. Check it",
-            value="`/gamedatemate status` — then change game, rich presence, or join voice; registered members update in the app.",
+            value=(
+                "`/gamedatemate status` — see **Auto-sync** (default every 15 min for web-linked accounts only).\n"
+                "`/gamedatemate interval 0` to turn that off, or `interval 30` to change cadence.\n"
+                "Manual `/gamedatemate sync` uses the same DB-backed member list as auto-sync."
+            ),
             inline=False,
         )
         embed.set_footer(text=intent_line)
@@ -526,11 +658,20 @@ class GameDateMate(commands.Cog):
         enabled = await self.config.guild(ctx.guild).enabled()
         url = _normalize_base_url(await self.config.guild(ctx.guild).app_url())
         secret_set = bool((await self.config.guild(ctx.guild).secret() or "").strip())
+        interval = await self.config.guild(ctx.guild).periodic_sync_minutes()
+        if interval is None:
+            interval = 15
         ok, missing = self._intents_ok()
+        interval_line = (
+            f"**Auto-sync:** off (`/gamedatemate interval 0`)"
+            if interval <= 0
+            else f"**Auto-sync:** every **{interval}** min (web-linked accounts only)"
+        )
         lines = [
             f"**Forwarding:** {'enabled' if enabled else 'disabled'}",
             f"**App URL:** `{url or 'not set'}`",
             f"**Webhook secret:** {'set' if secret_set else 'not set'}",
+            interval_line,
             f"**Intents:** {'OK' if ok else 'missing ' + ', '.join(missing)}",
             f"**This guild ID** (for the web app): `{ctx.guild.id}`",
         ]
@@ -597,7 +738,7 @@ class GameDateMate(commands.Cog):
     @commands.has_permissions(manage_guild=True)
     @commands.bot_has_permissions(read_messages=True)
     async def gdm_sync(self, ctx: commands.Context):
-        """POST presence for every non-bot member currently in cache (fills gaps after bot restarts)."""
+        """POST presence for Discord accounts that exist in the web app DB for this linked group."""
         if ctx.guild is None:
             return
         if not await self._guild_ready(ctx.guild):
@@ -606,25 +747,30 @@ class GameDateMate(commands.Cog):
         guild = ctx.guild
         if ctx.interaction:
             await ctx.defer(ephemeral=False)
-        msg = await ctx.send("Chunking members (if needed) and syncing presence to Game Date Mate…")
-        try:
-            if not guild.chunked:
-                await guild.chunk(cache=True)
-        except Exception as e:
-            log.warning("GameDateMate sync chunk failed: %s", e)
-        members = [m for m in guild.members if not m.bot]
-        ok = 0
-        err = 0
-        for m in members:
-            code, _ = await self._post_presence_now(guild, m)
-            if code == 200:
-                ok += 1
-            elif code > 0:
-                err += 1
-            await asyncio.sleep(_SYNC_DELAY_S)
+        msg = await ctx.send("Fetching web-linked Discord IDs and syncing presence…")
+        stats = await self._sync_db_linked_members(guild)
+        self._last_bulk_sync_mono[guild.id] = time.monotonic()
         await msg.edit(
             content=(
-                f"Sync finished: **{ok}** HTTP 200, **{err}** other codes, **{len(members)}** members processed.\n"
-                "200 + `skipped` in logs still means the web app ignored some users (not linked / not in group)."
+                f"Sync finished — **{stats['targets']}** linked in DB, **{stats['posted']}** POSTs sent, "
+                f"**{stats['http200']}** HTTP 200.\n"
+                f"**{stats['not_in_server']}** not found in this Discord server (left server or wrong account).\n"
+                "If `targets` is 0, check group **Discord server ID** in the web app or that members linked Discord + joined the group."
             )
         )
+
+    @gamedatemate.command(name="interval")
+    @commands.has_permissions(manage_guild=True)
+    async def gdm_interval(self, ctx: commands.Context, minutes: int):
+        """Set automatic sync interval in minutes (`0` = off). Only syncs users returned by the web app for this guild."""
+        if minutes < 0 or minutes > 24 * 60:
+            await ctx.send("Use a value between **0** (off) and **1440** (once per day), or a sensible number like **15**.")
+            return
+        await self.config.guild(ctx.guild).periodic_sync_minutes.set(minutes)
+        if minutes == 0:
+            await ctx.send("Automatic DB-scoped sync is **off** for this server. `/gamedatemate sync` still works manually.")
+        else:
+            await ctx.send(
+                f"Automatic sync **on**: roughly every **{minutes}** minutes for accounts the web app lists for this guild "
+                f"(see `GET /api/discord/sync-targets`). The cog checks every **5** minutes, so spacing may drift slightly."
+            )
