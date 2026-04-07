@@ -7,6 +7,8 @@ guild nickname + username, and voice channel name so the web UI stays accurate.
 
 from __future__ import annotations
 
+import asyncio
+import json
 import logging
 from datetime import datetime, timezone
 from typing import Any, Optional
@@ -18,6 +20,11 @@ from redbot.core import Config, commands
 from redbot.core.bot import Red
 
 log = logging.getLogger("red.nottherealtar.gamedatemate")
+
+# Coalesce rapid Discord events into one HTTP call per member (presence spams updates).
+_DEBOUNCE_S = 1.0
+# Space out bulk sync so the web app / host is not hammered.
+_SYNC_DELAY_S = 0.06
 
 
 def _normalize_base_url(url: str) -> str:
@@ -230,6 +237,24 @@ class GameDateMate(commands.Cog):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=9876543210, force_registration=True)
         self.config.register_guild(enabled=False, app_url="", secret="")
+        self._http: Optional[aiohttp.ClientSession] = None
+        self._debounce_tasks: dict[str, asyncio.Task] = {}
+
+    async def cog_load(self) -> None:
+        # One pooled session: avoids new TLS + TCP per presence tick (major reliability win on busy guilds).
+        self._http = aiohttp.ClientSession(
+            timeout=aiohttp.ClientTimeout(total=15),
+            headers={"User-Agent": "GameDateMate-RedCog/2.0 (+https://github.com/nottherealtar/TarsOnlineCogs)"},
+        )
+
+    async def cog_unload(self) -> None:
+        for t in list(self._debounce_tasks.values()):
+            if not t.done():
+                t.cancel()
+        self._debounce_tasks.clear()
+        if self._http and not self._http.closed:
+            await self._http.close()
+        self._http = None
 
     async def red_delete_data_for_user(self, **kwargs):
         return
@@ -252,42 +277,93 @@ class GameDateMate(commands.Cog):
         secret = (await self.config.guild(guild).secret() or "").strip()
         return bool(url and secret)
 
-    async def _post_presence(self, guild: discord.Guild, member: discord.Member) -> None:
+    async def _post_presence_now(self, guild: discord.Guild, member: discord.Member) -> tuple[int, str]:
+        """Send one payload; returns (status_code, response_snippet)."""
         if member.bot:
-            return
+            return 0, "skipped_bot"
         if not await self._guild_ready(guild):
-            return
+            return 0, "skipped_guild_disabled"
+        if self._http is None or self._http.closed:
+            log.error("GameDateMate: HTTP session not ready — reload the cog or restart Red.")
+            return 0, "no_session"
         url = _normalize_base_url(await self.config.guild(guild).app_url())
         secret = (await self.config.guild(guild).secret() or "").strip()
         payload = _member_presence_payload(guild, member)
         endpoint = f"{url}/api/discord/presence"
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    endpoint,
-                    headers={
-                        "Content-Type": "application/json",
-                        "x-gdm-secret": secret,
-                    },
-                    json=payload,
-                    timeout=aiohttp.ClientTimeout(total=12),
-                ) as resp:
-                    if resp.status >= 400:
-                        text = await resp.text()
-                        log.warning(
-                            "GameDateMate POST %s -> %s: %s",
-                            resp.status,
-                            endpoint,
-                            text[:500],
-                        )
+            async with self._http.post(
+                endpoint,
+                headers={
+                    "Content-Type": "application/json",
+                    "x-gdm-secret": secret,
+                },
+                json=payload,
+            ) as resp:
+                text = await resp.text()
+                if resp.status >= 400:
+                    log.warning(
+                        "GameDateMate POST %s -> %s: %s",
+                        resp.status,
+                        endpoint,
+                        text[:500],
+                    )
+                elif resp.status == 200:
+                    try:
+                        j = json.loads(text) if text else {}
+                        sk = j.get("skipped")
+                        if sk:
+                            log.info(
+                                "GameDateMate OK but app skipped discordUserId=%s reason=%s "
+                                "(link Discord in Clerk + join the group on the site)",
+                                member.id,
+                                sk,
+                            )
+                    except Exception:
+                        pass
+                return resp.status, text[:800]
         except aiohttp.ClientError as e:
             log.warning("GameDateMate POST failed: %s", e)
+            return 0, str(e)[:400]
+
+    def _schedule_presence_post(self, guild: discord.Guild, member: discord.Member) -> None:
+        """Debounce: Discord can emit many presence updates per second for one user."""
+        if member.bot:
+            return
+        key = f"{guild.id}-{member.id}"
+        old = self._debounce_tasks.pop(key, None)
+        if old is not None and not old.done():
+            old.cancel()
+        mid = member.id
+        gid = guild.id
+
+        async def _run() -> None:
+            try:
+                await asyncio.sleep(_DEBOUNCE_S)
+                g = self.bot.get_guild(gid)
+                if g is None:
+                    return
+                m = g.get_member(mid)
+                if m is None or m.bot:
+                    return
+                await self._post_presence_now(g, m)
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                log.exception("GameDateMate debounced post failed guild=%s member=%s", gid, mid)
+            finally:
+                self._debounce_tasks.pop(key, None)
+
+        self._debounce_tasks[key] = asyncio.create_task(_run())
+
+    async def _post_presence(self, guild: discord.Guild, member: discord.Member) -> None:
+        self._schedule_presence_post(guild, member)
 
     @commands.Cog.listener()
     async def on_presence_update(self, before: Optional[discord.Member], after: Optional[discord.Member]):
+        # discord.py: (before, after) are both Member for the same user.
         if after is None or after.guild is None:
             return
-        await self._post_presence(after.guild, after)
+        self._schedule_presence_post(after.guild, after)
 
     @commands.Cog.listener()
     async def on_voice_state_update(
@@ -299,7 +375,8 @@ class GameDateMate(commands.Cog):
         guild = member.guild
         if before.channel == after.channel:
             return
-        await self._post_presence(guild, member)
+        # Voice moves should feel snappy — post soon but still coalesce double events.
+        self._schedule_presence_post(guild, member)
 
     @commands.Cog.listener()
     async def on_member_update(self, before: discord.Member, after: discord.Member):
@@ -308,7 +385,7 @@ class GameDateMate(commands.Cog):
             return
         if not _member_identity_changed(before, after):
             return
-        await self._post_presence(after.guild, after)
+        self._schedule_presence_post(after.guild, after)
 
     @commands.hybrid_group(name="gamedatemate", aliases=["gdm"], invoke_without_command=True, fallback="help")
     @commands.guild_only()
@@ -329,7 +406,9 @@ class GameDateMate(commands.Cog):
                 f"`{p}gamedatemate guide` — setup walkthrough\n"
                 f"`{p}gamedatemate url` / `secret` / `enable` / `disable`\n"
                 f"`{p}gamedatemate status` — config + intents\n"
-                f"`{p}gamedatemate test` — reachability check"
+                f"`{p}gamedatemate test` — reachability check\n"
+                f"`{p}gamedatemate push` — send **your** presence now (see API reply)\n"
+                f"`{p}gamedatemate sync` — backfill **all** cached members (admin)"
             ),
             inline=False,
         )
@@ -494,3 +573,58 @@ class GameDateMate(commands.Cog):
                     await ctx.send(f"Unexpected response **{resp.status}**: `{text[:200]}`")
         except aiohttp.ClientError as e:
             await ctx.send(f"Could not reach the app: `{e}`")
+
+    @gamedatemate.command(name="push")
+    async def gdm_push(self, ctx: commands.Context):
+        """POST your current presence immediately and show the API response (troubleshooting)."""
+        if ctx.guild is None:
+            return
+        if not await self._guild_ready(ctx.guild):
+            await ctx.send("Enable forwarding for this server first (`/gamedatemate enable`).")
+            return
+        if ctx.author.bot:
+            return
+        status, snippet = await self._post_presence_now(ctx.guild, ctx.author)
+        await ctx.send(
+            f"**HTTP {status}** for your user `{ctx.author.id}`\n```\n{snippet}\n```\n"
+            "• `skipped: user_not_registered` → link Discord in **Clerk** on the site.\n"
+            "• `skipped: not_in_group` → join the group with an invite on the site.\n"
+            "• `ok: true` → stored; refresh the Members page.",
+            ephemeral=bool(ctx.interaction),
+        )
+
+    @gamedatemate.command(name="sync")
+    @commands.has_permissions(manage_guild=True)
+    @commands.bot_has_permissions(read_messages=True)
+    async def gdm_sync(self, ctx: commands.Context):
+        """POST presence for every non-bot member currently in cache (fills gaps after bot restarts)."""
+        if ctx.guild is None:
+            return
+        if not await self._guild_ready(ctx.guild):
+            await ctx.send("Enable forwarding and set URL + secret first.")
+            return
+        guild = ctx.guild
+        if ctx.interaction:
+            await ctx.defer(ephemeral=False)
+        msg = await ctx.send("Chunking members (if needed) and syncing presence to Game Date Mate…")
+        try:
+            if not guild.chunked:
+                await guild.chunk(cache=True)
+        except Exception as e:
+            log.warning("GameDateMate sync chunk failed: %s", e)
+        members = [m for m in guild.members if not m.bot]
+        ok = 0
+        err = 0
+        for m in members:
+            code, _ = await self._post_presence_now(guild, m)
+            if code == 200:
+                ok += 1
+            elif code > 0:
+                err += 1
+            await asyncio.sleep(_SYNC_DELAY_S)
+        await msg.edit(
+            content=(
+                f"Sync finished: **{ok}** HTTP 200, **{err}** other codes, **{len(members)}** members processed.\n"
+                "200 + `skipped` in logs still means the web app ignored some users (not linked / not in group)."
+            )
+        )
