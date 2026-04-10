@@ -37,6 +37,8 @@ This is a collection of cogs I have made over time—fun experiments, server uti
 |-----|-------------|--------|
 | `arcraiders` | Arc Raiders map rotation tracker with auto-updates | ![Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen) |
 | `chaoscoin` | **Chaos Coin:** `/chaos` flip, roll (2–100), ask — RNG with café oracle flavor (no economy) | ![Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen) |
+| `complimentroulette` | **`/compliment`** — huge pool of weirdly specific praise; optional `@user` | ![Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen) |
+| `cooldownbuddy` | **`/brb`** — easy minutes / `1h` / `at 3:30pm`; ping deflection + return proverbs | ![Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen) |
 | `assky` | Sends a random ASCII emoji/emoticon | ![Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen) |
 | `coffee` | Virtual coffee GIF (`order`), daily UTC **`checkin`** streaks, title ladder, **`board`** leaderboards | ![Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen) |
 | `howcracked` | Rate the "cracked" level with RPG-style icons | ![Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen) |

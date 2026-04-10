@@ -1,0 +1,11 @@
+{
+    "author": ["nottherealtar"],
+    "install_msg": "Try `/brb` for help. Set with `15`, `1h`, `at 3:30pm`; clear with `back`. Admins: `/brbzone America/New_York` for clock times. Ping replies need the bot to see message content in servers.",
+    "name": "cooldownbuddy",
+    "short": "BRB/lurk timer, ping deflection, bean proverbs",
+    "description": "Hybrid /brb with minutes, Xm, Xh, XhYm, at/until HH:MM (guild TZ via /brbzone). Mentions while away get dismissive proverbs; back or timer posts a return proverb in the set channel.",
+    "min_bot_version": "3.5.0",
+    "tags": ["utility", "fun", "afk"],
+    "end_user_data_statement": "Stores per-member BRB until timestamp and channel ID per guild, and guild IANA timezone for parsing clock times.",
+    "type": "COG"
+}

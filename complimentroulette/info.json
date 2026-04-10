@@ -1,0 +1,11 @@
+{
+    "author": ["nottherealtar"],
+    "install_msg": "`/compliment` for yourself, `/compliment @user` to aim praise. Aliases: beanpraise, praiseroulette.",
+    "name": "complimentroulette",
+    "short": "Weirdly specific random compliments",
+    "description": "Hybrid /compliment with a large pool of oddly specific praise; optional target member. No persistence.",
+    "min_bot_version": "3.5.0",
+    "tags": ["fun", "social"],
+    "end_user_data_statement": "This cog does not persistently store any data or metadata about users.",
+    "type": "COG"
+}
