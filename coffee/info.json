@@ -2,16 +2,16 @@
     "author": [
         "nottherealtar"
     ],
-    "install_msg": "`[p]help coffee`",
-    "name": "teachme",
-    "short": "Order a coffee",
-    "description": "Allows you to order yourself or someone you mention a coffee.",
+    "install_msg": "Classic GIF is now **`[p]coffee order`** or **`/coffee order`** (was `[p]coffee`). Daily streak: **`/coffee checkin`** in a server. See **`/coffee`** subcommands: streak, titles, board.",
+    "name": "coffee",
+    "short": "Virtual coffee orders and daily check-in streaks",
+    "description": "Pour a virtual coffee (GIF), daily UTC check-ins with streaks, silly titles from best streak, and guild leaderboards (current/best/total).",
     "min_bot_version": "3.5.0",
     "tags": [
         "coffee",
-        "response",
-        "fun"
+        "fun",
+        "streak"
     ],
-    "end_user_data_statement": "This cog does not persistently store any data or metadata about users.",
+    "end_user_data_statement": "Stores per-guild per-member last check-in date (UTC), current streak, best streak, and total check-ins for titles and leaderboards.",
     "type": "COG"
 }
