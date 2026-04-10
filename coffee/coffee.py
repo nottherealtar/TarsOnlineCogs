@@ -70,10 +70,13 @@ class Coffee(commands.Cog):
         for guild in self.bot.guilds:
             await self.config.member_from_ids(guild.id, user_id).clear()
 
-    @commands.hybrid_group(name="coffee", invoke_without_command=True, fallback="order")
+    @commands.hybrid_group(name="coffee", invoke_without_command=True)
     async def coffee(self, ctx: commands.Context):
         """Coffee lounge: orders, daily check-ins, streaks, and boards."""
-        pass
+        # No fallback="order" here: discord.py would register slash "order" twice
+        # (fallback + @coffee.command(order)) → CommandAlreadyRegistered.
+        if ctx.invoked_subcommand is None:
+            await ctx.send_help()
 
     @coffee.command(name="order")
     async def coffee_order(self, ctx, user: Optional[discord.User] = None):
