@@ -1,0 +1,17 @@
+{
+    "author": [
+        "nottherealtar"
+    ],
+    "install_msg": "Try `/chaos flip`, `/chaos roll`, `/chaos ask` — pure café chaos, no economy.",
+    "name": "chaoscoin",
+    "short": "Chaos coin: flip, roll, oracle (café flavor text)",
+    "description": "Hybrid commands: chaos flip, chaos roll (2–100 sides), chaos ask. Random outcomes wrapped in silly coffee-shop metaphors. No currency or persistence.",
+    "min_bot_version": "3.5.0",
+    "tags": [
+        "fun",
+        "random",
+        "games"
+    ],
+    "end_user_data_statement": "This cog does not persistently store any data or metadata about users.",
+    "type": "COG"
+}
