@@ -221,6 +221,9 @@ _PRAISE: List[str] = [
 class Complimentroulette(commands.Cog):
     """Spin weirdly specific praise for yourself or a friend."""
 
+    def __init__(self, bot):
+        self.bot = bot
+
     @commands.hybrid_command(name="compliment", aliases=["beanpraise", "praiseroulette"])
     async def compliment_cmd(self, ctx: commands.Context, member: Optional[discord.Member] = None):
         """
@@ -229,7 +232,6 @@ class Complimentroulette(commands.Cog):
         Use `/compliment` for yourself, or `/compliment @user` to aim it at someone.
         """
         line = random.choice(_PRAISE)
-        target = member or ctx.author
         if member and member.bot:
             await ctx.send("Bots run on validation, not validation *from* humans. Pick a person.")
             return

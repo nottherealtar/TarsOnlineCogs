@@ -79,6 +79,9 @@ def _roll_verdict(result: int, sides: int) -> str:
 class Chaoscoin(commands.Cog):
     """Chaos Coin: silly café metaphors for flips, dice, and yes/no asks. No economy."""
 
+    def __init__(self, bot):
+        self.bot = bot
+
     @commands.hybrid_group(name="chaos", invoke_without_command=True)
     async def chaos(self, ctx: commands.Context):
         """Chaos Coin — flip, roll, ask. Pure flavor text."""
