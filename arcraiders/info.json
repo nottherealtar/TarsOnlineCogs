@@ -2,10 +2,10 @@
     "author": [
         "nottherealtar"
     ],
-    "install_msg": "Arc Raiders cog installed! Use `[p]arc` for rotations and `[p]arc key <name>` for key locations. Set up auto-posts with `[p]arc notify channel add #channel` then `[p]arc notify enable`.",
+    "install_msg": "Arc Raiders cog loaded. Try `[p]arc` or `[p]arc help`. Keys: `[p]arc key town hall`. Alerts: `[p]arc notify add` then `[p]arc notify enable` in your event channel.",
     "name": "ArcRaiders",
-    "short": "Track Arc Raiders map rotations, events, and key locations",
-    "description": "Arc Raiders map rotation tracker powered by the MetaForge live event schedule, with automatic change notifications, key lookup, and a fallback UTC table if the API is down.",
+    "short": "Arc Raiders live rotations, alerts, and key lookup",
+    "description": "Live map event schedule from MetaForge with automatic change notifications, editable live embeds, key location lookup, and a fallback UTC table if the API is unavailable.",
     "min_bot_version": "3.5.0",
     "requirements": [],
     "tags": [

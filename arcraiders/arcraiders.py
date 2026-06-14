@@ -1,12 +1,16 @@
 #
-#  _   _  ___ _____ _____ _   _ _____ ____  _____    _    _   _____  _    ____
-# | \ | |/ _ \_   _|_   _| | | | ____|  _ \| ____|  / \  | | |_   _|/ \  |  _ \
-# |  \| | | | || |   | | | |_| |  _| | |_) |  _|   / _ \ | |   | | / _ \ | |_) |
-# | |\  | |_| || |   | | |  _  | |___|  _ <| |___ / ___ \| |___| |/ ___ \|  _ <
-# |_| \_|\___/ |_|   |_| |_| |_|_____|_| \_\_____/_/   \_\_____|_/_/   \_\_| \_\
-#
 # Arc Raiders Map Rotation Tracker for Red-DiscordBot
-# Based on: https://github.com/zfael/arc-raiders-discord-bot
+# Live schedule: https://metaforge.app/arc-raiders/api
+#
+# Hybrid constraints (see serverassistant.py):
+# - Only ``arc`` uses ``@commands.hybrid_group``.
+# - Child *groups* (auto, notify) use ``with_app_command=False`` (prefix-only admin).
+# - Do not nest groups deeper than one level under ``arc`` (Discord hybrid limit).
+#
+
+import asyncio
+import logging
+import re
 
 import discord
 from discord import app_commands
@@ -14,7 +18,6 @@ from redbot.core import commands, Config
 from redbot.core.bot import Red
 from datetime import datetime, timezone, timedelta
 from typing import Dict, List, Optional, Set, Tuple
-import asyncio
 
 from .keys_data import (
     KEYS,
@@ -28,9 +31,15 @@ from .keys_data import (
 )
 from .metaforge import METAFORGE_ATTRIBUTION, MetaForgeSchedule
 
+log = logging.getLogger("red.arcraiders")
+
 
 class ArcRaiders(commands.Cog):
-    """Track Arc Raiders map rotations and events."""
+    """Arc Raiders map rotations, live event alerts, and key location lookup.
+
+    Use ``[p]arc`` or ``/arc`` for the current rotation. Admins configure alerts with
+    ``[p]arc notify add`` then ``[p]arc notify enable`` (prefix-only admin commands).
+    """
 
     # Map display names and emojis
     MAPS = {
@@ -120,10 +129,14 @@ class ArcRaiders(commands.Cog):
         last_snapshot = await self.config.last_notified_snapshot()
 
         if last_snapshot and last_snapshot != current_snapshot:
-            previous = self._rotation_from_snapshot(last_snapshot, current.get("hour", 0))
-            await self._send_change_notifications(previous, current)
+            if await self._any_notify_enabled():
+                previous = self._rotation_from_snapshot(last_snapshot, current.get("hour", 0))
+                await self._send_change_notifications(previous, current)
+            else:
+                await self.config.last_notified_snapshot.set(current_snapshot)
 
-        await self.config.last_notified_snapshot.set(current_snapshot)
+        if not last_snapshot or last_snapshot == current_snapshot:
+            await self.config.last_notified_snapshot.set(current_snapshot)
         self._last_rotation = current
         self.update_task = asyncio.create_task(self._auto_update_loop())
 
@@ -136,6 +149,9 @@ class ArcRaiders(commands.Cog):
     async def red_delete_data_for_user(self, **kwargs):
         """Nothing to delete."""
         return
+
+    async def red_delete_data_for_guild(self, *, guild_id: int, **kwargs):
+        await self.config.guild_from_id(guild_id).clear()
 
     def _get_current_hour(self) -> int:
         """Get the current UTC hour."""
@@ -287,6 +303,38 @@ class ArcRaiders(commands.Cog):
         for key, info in self.MAPS.items():
             if search in key.lower() or search in info["name"].lower().replace(" ", ""):
                 return key
+        return None
+
+    def _resolve_text_channel(
+        self, ctx: commands.Context, channel_text: Optional[str] = None
+    ) -> Optional[discord.TextChannel]:
+        """Resolve a channel from mention, name, or default to the current channel."""
+        if not channel_text or channel_text.lower() in ("here", "this"):
+            return ctx.channel if isinstance(ctx.channel, discord.TextChannel) else None
+
+        mention = re.fullmatch(r"<#(\d+)>", channel_text.strip())
+        if mention:
+            channel = ctx.guild.get_channel(int(mention.group(1)))
+            if isinstance(channel, discord.TextChannel):
+                return channel
+
+        cleaned = channel_text.strip().lstrip("#").strip()
+        if not cleaned:
+            return ctx.channel if isinstance(ctx.channel, discord.TextChannel) else None
+
+        if cleaned.isdigit():
+            channel = ctx.guild.get_channel(int(cleaned))
+            if isinstance(channel, discord.TextChannel):
+                return channel
+
+        channel = discord.utils.get(ctx.guild.text_channels, name=cleaned)
+        if channel:
+            return channel
+
+        for channel in ctx.guild.text_channels:
+            if cleaned.lower() in channel.name.lower():
+                return channel
+
         return None
 
     def _map_events(self, rotation: dict, map_key: str) -> Tuple[str, str]:
@@ -534,11 +582,38 @@ class ArcRaiders(commands.Cog):
 
         await self.config.last_notified_snapshot.set(self._rotation_snapshot(current))
 
-    @commands.hybrid_group(name="arc", invoke_without_command=True)
+    async def _any_notify_enabled(self) -> bool:
+        for settings in (await self.config.all_guilds()).values():
+            if settings.get("notify_enabled") and settings.get("notify_channel_ids"):
+                return True
+        return False
+
+    @commands.hybrid_group(name="arc", invoke_without_command=True, fallback="help")
     @commands.guild_only()
     async def arc(self, ctx: commands.Context):
-        """Arc Raiders map rotation commands."""
+        """Arc Raiders map rotation overview."""
         embed = self._build_overview_embed()
+        await ctx.send(embed=embed)
+
+    @arc.command(name="help")
+    async def arc_help(self, ctx: commands.Context):
+        """List Arc Raiders commands."""
+        p = ctx.clean_prefix
+        embed = discord.Embed(title="Arc Raiders Commands", color=0x7B68EE)
+        embed.description = (
+            f"**Rotation**\n"
+            f"`{p}arc` / `/arc` — current overview\n"
+            f"`{p}arc now` · `{p}arc next` · `{p}arc hour <0-23>`\n"
+            f"`{p}arc map <name>` · `{p}arc event <name>`\n"
+            f"`{p}arc maps` · `{p}arc events` · `{p}arc status`\n\n"
+            f"**Keys**\n"
+            f"`{p}arc key <name>` / `/arc key` — door location + directions\n"
+            f"`{p}arc keys [map]` — list keys\n\n"
+            f"**Admin (Manage Server, prefix only)**\n"
+            f"`{p}arc auto channel` · `{p}arc auto enable`\n"
+            f"`{p}arc notify add` · `{p}arc notify enable` · `{p}arc notify test`"
+        )
+        embed.set_footer(text=self._data_footer())
         await ctx.send(embed=embed)
 
     @arc.command(name="now")
@@ -666,9 +741,10 @@ class ArcRaiders(commands.Cog):
                     continue
                 if row["start"] > now + timedelta(hours=24):
                     continue
-                label = row["start"].strftime("%H:%M UTC")
-                if row["major"]:
-                    label += " (2x)"
+                label = (
+                    f"{row['start'].strftime('%H:%M UTC')} — "
+                    f"{self._format_event(row['name'], is_major=row['major'])}"
+                )
                 if row["active_now"]:
                     label += " \U0001F534"
                 by_map.setdefault(row["map_key"], []).append(label)
@@ -834,7 +910,7 @@ class ArcRaiders(commands.Cog):
         await ctx.send(embed=embed)
 
     # Auto-update functionality
-    @arc.group(name="auto", invoke_without_command=True)
+    @arc.group(name="auto", invoke_without_command=True, with_app_command=False)
     @commands.admin_or_permissions(manage_guild=True)
     async def arc_auto(self, ctx: commands.Context):
         """Configure automatic rotation updates."""
@@ -849,10 +925,14 @@ class ArcRaiders(commands.Cog):
 
     @arc_auto.command(name="channel")
     @commands.admin_or_permissions(manage_guild=True)
-    async def arc_auto_channel(self, ctx: commands.Context, channel: discord.TextChannel):
-        """Set the channel for automatic rotation updates."""
-        await self.config.guild(ctx.guild).auto_channel_id.set(channel.id)
-        await ctx.send(f"Auto-update channel set to {channel.mention}.")
+    async def arc_auto_channel(self, ctx: commands.Context, *, channel: Optional[str] = None):
+        """Set the channel for automatic rotation updates (defaults to this channel)."""
+        resolved = self._resolve_text_channel(ctx, channel)
+        if not resolved:
+            await ctx.send("Could not find that channel. Use `#channel-name`, a mention, or run this in the target channel.")
+            return
+        await self.config.guild(ctx.guild).auto_channel_id.set(resolved.id)
+        await ctx.send(f"Auto-update channel set to {resolved.mention}.")
 
     @arc_auto.command(name="enable")
     @commands.admin_or_permissions(manage_guild=True)
@@ -863,7 +943,7 @@ class ArcRaiders(commands.Cog):
             await ctx.send("Please set a channel first with `arc auto channel #channel`.")
             return
         await self.config.guild(ctx.guild).auto_enabled.set(True)
-        await ctx.send("Auto-updates enabled. The rotation embed will update every hour.")
+        await ctx.send("Auto-updates enabled. The live rotation embed will refresh when events change.")
 
         # Post initial message
         channel = ctx.guild.get_channel(channel_id)
@@ -879,7 +959,7 @@ class ArcRaiders(commands.Cog):
         await self.config.guild(ctx.guild).auto_enabled.set(False)
         await ctx.send("Auto-updates disabled.")
 
-    @arc.group(name="notify", invoke_without_command=True)
+    @arc.group(name="notify", invoke_without_command=True, with_app_command=False)
     @commands.admin_or_permissions(manage_guild=True)
     async def arc_notify(self, ctx: commands.Context):
         """Configure automatic posts when map rotations change."""
@@ -905,7 +985,7 @@ class ArcRaiders(commands.Cog):
         )
         embed.add_field(
             name="Channels",
-            value="\n".join(channels) if channels else "None — use `arc notify channel add #channel`",
+            value="\n".join(channels) if channels else "None — use `arc notify add` in a channel",
             inline=False,
         )
         embed.add_field(
@@ -918,42 +998,48 @@ class ArcRaiders(commands.Cog):
             value=", ".join(notify_events) if notify_events else "Any change",
             inline=False,
         )
-        embed.set_footer(text="Posts automatically at the top of each UTC hour when rotations change")
+        embed.set_footer(text="Posts when live map events change (MetaForge schedule)")
         await ctx.send(embed=embed)
 
-    @arc_notify.group(name="channel", invoke_without_command=True)
+    @arc_notify.command(name="add", aliases=["addchannel"])
     @commands.admin_or_permissions(manage_guild=True)
-    async def arc_notify_channel(self, ctx: commands.Context):
-        """Manage notification channels."""
-        await ctx.send("Use `add`, `remove`, or `list`.")
-
-    @arc_notify_channel.command(name="add")
-    @commands.admin_or_permissions(manage_guild=True)
-    async def arc_notify_channel_add(self, ctx: commands.Context, channel: discord.TextChannel):
-        """Add a channel for rotation change alerts."""
-        channel_ids = await self.config.guild(ctx.guild).notify_channel_ids()
-        if channel.id in channel_ids:
-            await ctx.send(f"{channel.mention} is already a notification channel.")
+    async def arc_notify_add(self, ctx: commands.Context, *, channel: Optional[str] = None):
+        """Add a channel for rotation change alerts (defaults to this channel)."""
+        resolved = self._resolve_text_channel(ctx, channel)
+        if not resolved:
+            await ctx.send(
+                "Could not find that channel. Try:\n"
+                "• `arc notify add` — while in the target channel\n"
+                "• `arc notify add #arc-raiders-events` — no space after `#`"
+            )
             return
-        channel_ids.append(channel.id)
-        await self.config.guild(ctx.guild).notify_channel_ids.set(channel_ids)
-        await ctx.send(f"Added {channel.mention} for rotation alerts.")
-
-    @arc_notify_channel.command(name="remove", aliases=["del", "delete"])
-    @commands.admin_or_permissions(manage_guild=True)
-    async def arc_notify_channel_remove(self, ctx: commands.Context, channel: discord.TextChannel):
-        """Remove a notification channel."""
         channel_ids = await self.config.guild(ctx.guild).notify_channel_ids()
-        if channel.id not in channel_ids:
-            await ctx.send(f"{channel.mention} is not configured.")
+        if resolved.id in channel_ids:
+            await ctx.send(f"{resolved.mention} is already a notification channel.")
             return
-        channel_ids.remove(channel.id)
+        channel_ids.append(resolved.id)
         await self.config.guild(ctx.guild).notify_channel_ids.set(channel_ids)
-        await ctx.send(f"Removed {channel.mention} from rotation alerts.")
+        await ctx.send(f"Added {resolved.mention} for rotation alerts.")
 
-    @arc_notify_channel.command(name="list")
+    @arc_notify.command(name="remove", aliases=["removechannel", "del", "delete"])
     @commands.admin_or_permissions(manage_guild=True)
-    async def arc_notify_channel_list(self, ctx: commands.Context):
+    async def arc_notify_remove(self, ctx: commands.Context, *, channel: Optional[str] = None):
+        """Remove a notification channel (defaults to this channel)."""
+        resolved = self._resolve_text_channel(ctx, channel)
+        if not resolved:
+            await ctx.send("Could not find that channel.")
+            return
+        channel_ids = await self.config.guild(ctx.guild).notify_channel_ids()
+        if resolved.id not in channel_ids:
+            await ctx.send(f"{resolved.mention} is not configured.")
+            return
+        channel_ids.remove(resolved.id)
+        await self.config.guild(ctx.guild).notify_channel_ids.set(channel_ids)
+        await ctx.send(f"Removed {resolved.mention} from rotation alerts.")
+
+    @arc_notify.command(name="channels", aliases=["list", "listchannels"])
+    @commands.admin_or_permissions(manage_guild=True)
+    async def arc_notify_channels(self, ctx: commands.Context):
         """List configured notification channels."""
         channel_ids = await self.config.guild(ctx.guild).notify_channel_ids()
         if not channel_ids:
@@ -971,11 +1057,11 @@ class ArcRaiders(commands.Cog):
         """Enable automatic rotation change posts."""
         channel_ids = await self.config.guild(ctx.guild).notify_channel_ids()
         if not channel_ids:
-            await ctx.send("Add at least one channel with `arc notify channel add #channel` first.")
+            await ctx.send("Add at least one channel with `arc notify add` first.")
             return
         await self.config.guild(ctx.guild).notify_enabled.set(True)
         await ctx.send(
-            "Rotation notifications enabled. The bot will post when map events change each UTC hour."
+            "Rotation notifications enabled. The bot will post when live map events change."
         )
 
     @arc_notify.command(name="disable")
@@ -1098,5 +1184,6 @@ class ArcRaiders(commands.Cog):
 
             except asyncio.CancelledError:
                 break
-            except Exception:
+            except Exception as exc:
+                log.exception("Arc Raiders update loop error: %s", exc)
                 await asyncio.sleep(60)
