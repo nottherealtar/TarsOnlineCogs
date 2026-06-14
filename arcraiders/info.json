@@ -2,10 +2,10 @@
     "author": [
         "nottherealtar"
     ],
-    "install_msg": "Arc Raiders cog installed! Use `[p]arc` to see current map rotations.",
+    "install_msg": "Arc Raiders cog installed! Use `[p]arc` for rotations and `[p]arc key <name>` for key locations. Set up auto-posts with `[p]arc notify channel add #channel` then `[p]arc notify enable`.",
     "name": "ArcRaiders",
-    "short": "Track Arc Raiders map rotations and events",
-    "description": "A comprehensive Arc Raiders map rotation tracker. Shows current and upcoming map conditions, event schedules, and supports automatic hourly updates. Based on the 24-hour UTC rotation cycle with major and minor events across all 5 maps.",
+    "short": "Track Arc Raiders map rotations, events, and key locations",
+    "description": "Arc Raiders map rotation tracker powered by the MetaForge live event schedule, with automatic change notifications, key lookup, and a fallback UTC table if the API is down.",
     "min_bot_version": "3.5.0",
     "requirements": [],
     "tags": [
@@ -13,8 +13,9 @@
         "arc-raiders",
         "rotation",
         "events",
+        "keys",
         "tracker"
     ],
-    "end_user_data_statement": "This cog stores guild settings for auto-update channels. No personal user data is stored.",
+    "end_user_data_statement": "This cog stores guild settings for auto-update and notification channels. No personal user data is stored.",
     "type": "COG"
 }
