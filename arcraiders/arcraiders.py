@@ -1,11 +1,7 @@
 #
 # Arc Raiders Map Rotation Tracker for Red-DiscordBot
 # Live schedule: https://metaforge.app/arc-raiders/api
-#
-# Hybrid constraints (see serverassistant.py):
-# - Only ``arc`` uses ``@commands.hybrid_group``.
-# - Child *groups* (auto, notify) use ``with_app_command=False`` (prefix-only admin).
-# - Do not nest groups deeper than one level under ``arc`` (Discord hybrid limit).
+# Prefix-only commands — do not nest groups deeper than one level under ``arc``.
 #
 
 import asyncio
@@ -13,7 +9,6 @@ import logging
 import re
 
 import discord
-from discord import app_commands
 from redbot.core import commands, Config
 from redbot.core.bot import Red
 from datetime import datetime, timezone, timedelta
@@ -25,7 +20,6 @@ from .keys_data import (
     RARITY_COLORS,
     RARITY_LABELS,
     get_key_by_id,
-    list_key_choices,
     list_key_names,
     search_keys,
 )
@@ -37,8 +31,7 @@ log = logging.getLogger("red.arcraiders")
 class ArcRaiders(commands.Cog):
     """Arc Raiders map rotations, live event alerts, and key location lookup.
 
-    Use ``[p]arc`` or ``/arc`` for the current rotation. Admins configure alerts with
-    ``[p]arc notify add`` then ``[p]arc notify enable`` (prefix-only admin commands).
+    Use ``[p]arc`` for the current rotation. Admins: ``[p]arc notify add`` then ``[p]arc notify enable``.
     """
 
     # Map display names and emojis
@@ -588,7 +581,7 @@ class ArcRaiders(commands.Cog):
                 return True
         return False
 
-    @commands.hybrid_group(name="arc", invoke_without_command=True)
+    @commands.group(name="arc", invoke_without_command=True)
     @commands.guild_only()
     async def arc(self, ctx: commands.Context):
         """Arc Raiders map rotation overview."""
@@ -602,14 +595,14 @@ class ArcRaiders(commands.Cog):
         embed = discord.Embed(title="Arc Raiders Commands", color=0x7B68EE)
         embed.description = (
             f"**Rotation**\n"
-            f"`{p}arc` / `/arc` — current overview\n"
+            f"`{p}arc` — current overview\n"
             f"`{p}arc now` · `{p}arc next` · `{p}arc hour <0-23>`\n"
             f"`{p}arc map <name>` · `{p}arc event <name>`\n"
             f"`{p}arc maps` · `{p}arc events` · `{p}arc status`\n\n"
             f"**Keys**\n"
-            f"`{p}arc key <name>` / `/arc key` — door location + directions\n"
+            f"`{p}arc key <name>` — door location + directions\n"
             f"`{p}arc keys [map]` — list keys\n\n"
-            f"**Admin (Manage Server, prefix only)**\n"
+            f"**Admin (Manage Server)**\n"
             f"`{p}arc auto channel` · `{p}arc auto enable`\n"
             f"`{p}arc notify add` · `{p}arc notify enable` · `{p}arc notify test`"
         )
@@ -854,24 +847,9 @@ class ArcRaiders(commands.Cog):
         await ctx.send(embed=embed)
 
     @arc.command(name="key")
-    @app_commands.describe(key_name="Key name or shorthand, e.g. town hall or control tower dam")
     async def arc_key(self, ctx: commands.Context, *, key_name: str):
         """Look up where to use a key. Shows a map/door image and directions."""
         await self._reply_key_lookup(ctx, key_name)
-
-    @arc_key.autocomplete("key_name")
-    async def arc_key_autocomplete(
-        self, interaction: discord.Interaction, current: str
-    ) -> List[app_commands.Choice[str]]:
-        current = current.lower()
-        choices = []
-        for entry in list_key_choices():
-            if current and current not in entry["label"].lower():
-                continue
-            choices.append(app_commands.Choice(name=entry["label"][:100], value=entry["id"]))
-            if len(choices) >= 25:
-                break
-        return choices
 
     @arc.command(name="keys")
     async def arc_keys(self, ctx: commands.Context, *, map_name: Optional[str] = None):
@@ -910,7 +888,7 @@ class ArcRaiders(commands.Cog):
         await ctx.send(embed=embed)
 
     # Auto-update functionality
-    @arc.group(name="auto", invoke_without_command=True, with_app_command=False)
+    @arc.group(name="auto", invoke_without_command=True)
     @commands.admin_or_permissions(manage_guild=True)
     async def arc_auto(self, ctx: commands.Context):
         """Configure automatic rotation updates."""
@@ -959,7 +937,7 @@ class ArcRaiders(commands.Cog):
         await self.config.guild(ctx.guild).auto_enabled.set(False)
         await ctx.send("Auto-updates disabled.")
 
-    @arc.group(name="notify", invoke_without_command=True, with_app_command=False)
+    @arc.group(name="notify", invoke_without_command=True)
     @commands.admin_or_permissions(manage_guild=True)
     async def arc_notify(self, ctx: commands.Context):
         """Configure automatic posts when map rotations change."""
