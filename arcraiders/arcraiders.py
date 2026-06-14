@@ -588,7 +588,7 @@ class ArcRaiders(commands.Cog):
                 return True
         return False
 
-    @commands.hybrid_group(name="arc", invoke_without_command=True, fallback="help")
+    @commands.hybrid_group(name="arc", invoke_without_command=True)
     @commands.guild_only()
     async def arc(self, ctx: commands.Context):
         """Arc Raiders map rotation overview."""
