@@ -110,9 +110,10 @@ Full-featured server management cog with:
 Track Arc Raiders game map rotations:
 - View current and upcoming map conditions
 - Search by map or event type
-- 24-hour UTC-based schedule
-- Auto-updating embeds in designated channels
-- All 5 maps: Dam, Buried City, Spaceport, Blue Gate, Stella Montis
+- Live MetaForge schedule with UTC fallback
+- One persistent auto-updating embed per channel with an Update button
+- Optional channel cleanup to remove old bot messages
+- All 6 maps: Dam, Buried City, Spaceport, Blue Gate, Stella Montis, Riven Tides
 
 ***
 

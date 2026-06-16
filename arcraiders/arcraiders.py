@@ -15,6 +15,7 @@ from datetime import datetime, timezone, timedelta
 from typing import Dict, List, Optional, Set, Tuple
 
 from .keys_data import (
+    BLOB,
     KEYS,
     MAP_INFO,
     RARITY_COLORS,
@@ -29,9 +30,10 @@ log = logging.getLogger("red.arcraiders")
 
 
 class ArcRaiders(commands.Cog):
-    """Arc Raiders map rotations, live event alerts, and key location lookup.
+    """Arc Raiders map rotations, live embeds, and key location lookup.
 
-    Use ``[p]arc`` for the current rotation. Admins: ``[p]arc notify add`` then ``[p]arc notify enable``.
+    Use ``[p]arc`` for the current rotation. Admins: ``[p]arc notify add`` then ``[p]arc notify enable``
+    for a single auto-updating embed with an Update button.
     """
 
     # Map display names and emojis
@@ -42,6 +44,14 @@ class ArcRaiders(commands.Cog):
         "blueGate": {"name": "Blue Gate", "emoji": "\U0001F535"},
         "stellaMontis": {"name": "Stella Montis", "emoji": "\u26F0\uFE0F"},
         "rivenTides": {"name": "Riven Tides", "emoji": "\U0001F30A"},
+    }
+
+    MAP_PREVIEWS = {
+        "dam": f"{BLOB}/images/preview/dam.jpg",
+        "buriedCity": f"{BLOB}/images/preview/buried_city.jpg",
+        "spaceport": f"{BLOB}/images/preview/spaceport.jpg",
+        "blueGate": f"{BLOB}/images/preview/blue_gate_zoomed.jpg",
+        "stellaMontis": f"{BLOB}/images/preview/stella_montis.jpg",
     }
 
     # Event types with emojis and descriptions
@@ -101,36 +111,28 @@ class ArcRaiders(commands.Cog):
             "auto_channel_id": None,
             "auto_message_id": None,
             "auto_enabled": False,
+            "auto_clean_channel": False,
             "notify_enabled": False,
             "notify_channel_ids": [],
+            "notify_message_ids": {},
             "notify_maps": [],
             "notify_events": [],
-            "notify_per_map": False,
+            "notify_clean_channel": False,
         }
         self.config.register_guild(**default_guild)
         self.config.register_global(last_notified_snapshot=None)
         self.update_task: Optional[asyncio.Task] = None
-        self._last_rotation: Optional[dict] = None
 
     async def cog_load(self):
         """Start schedule sync and the auto-update task."""
+        self.bot.add_view(ArcRaidersRefreshView(self))
         await self.schedule.start()
         await self.schedule.refresh(force=True)
 
         current = self._get_current_rotation()
-        current_snapshot = self._rotation_snapshot(current)
-        last_snapshot = await self.config.last_notified_snapshot()
-
-        if last_snapshot and last_snapshot != current_snapshot:
-            if await self._any_notify_enabled():
-                previous = self._rotation_from_snapshot(last_snapshot, current.get("hour", 0))
-                await self._send_change_notifications(previous, current)
-            else:
-                await self.config.last_notified_snapshot.set(current_snapshot)
-
-        if not last_snapshot or last_snapshot == current_snapshot:
-            await self.config.last_notified_snapshot.set(current_snapshot)
-        self._last_rotation = current
+        await self.config.last_notified_snapshot.set(self._rotation_snapshot(current))
+        await self._update_auto_embeds()
+        await self._update_notify_embeds()
         self.update_task = asyncio.create_task(self._auto_update_loop())
 
     async def cog_unload(self):
@@ -244,47 +246,91 @@ class ArcRaiders(commands.Cog):
         embed.timestamp = datetime.now(timezone.utc)
         return embed
 
-    def _build_overview_embed(self) -> discord.Embed:
-        """Build an overview embed with current and next rotation."""
+    def _build_overview_embed(
+        self,
+        *,
+        highlight_maps: Optional[Set[str]] = None,
+        previous: Optional[dict] = None,
+    ) -> discord.Embed:
+        """Build the live rotation embed shown in auto/notify channels."""
         current = self._get_current_rotation()
         next_rot, minutes = self._get_next_rotation()
         now = datetime.now(timezone.utc)
+        highlight_maps = highlight_maps or set()
 
         if self._using_live_data():
-            description = f"**Next rotation change in:** {minutes} minutes"
+            description = (
+                f"**Next rotation change:** ~{minutes} min\n"
+                f"Press **Update** below to fetch the latest schedule."
+            )
             next_label = next_rot.get("hour")
             if isinstance(next_label, int):
-                next_heading = f"\U0001F7E2 Next Rotation (~{next_label:02d}:00 UTC)"
+                next_heading = f"\U0001F7E2 Up Next (~{next_label:02d}:00 UTC)"
             else:
-                next_heading = "\U0001F7E2 Next Rotation"
+                next_heading = "\U0001F7E2 Up Next"
         else:
             description = (
-                f"**Current Hour:** {current['hour']}:00 UTC\n"
-                f"**Next rotation in:** {minutes} minutes"
+                f"**Current hour:** {current['hour']}:00 UTC\n"
+                f"**Next rotation:** ~{minutes} min\n"
+                f"Press **Update** below to retry the live API."
             )
-            next_heading = f"\U0001F7E2 Next Hour ({next_rot['hour']}:00 UTC)"
+            next_heading = f"\U0001F7E2 Up Next ({next_rot['hour']}:00 UTC)"
 
         embed = discord.Embed(
-            title="\U0001F3AE Arc Raiders Map Rotation",
+            title="\U0001F3AE Arc Raiders — Live Map Rotation",
             description=description,
             color=0x7B68EE,
         )
 
-        # Current conditions
-        current_text = ""
+        current_lines = []
         for map_key, map_info in self.MAPS.items():
             status = self._get_map_status(current, map_key)
-            current_text += f"{map_info['emoji']} **{map_info['name']}:** {status}\n"
+            prefix = "\U0001F7E1 " if map_key in highlight_maps else ""
+            current_lines.append(f"{prefix}{map_info['emoji']} **{map_info['name']}**\n{status}")
 
-        embed.add_field(name="\U0001F534 Current Conditions", value=current_text, inline=False)
+        embed.add_field(
+            name="\U0001F534 Current Conditions",
+            value="\n\n".join(current_lines),
+            inline=False,
+        )
 
-        # Next conditions
-        next_text = ""
+        next_lines = []
         for map_key, map_info in self.MAPS.items():
             status = self._get_map_status(next_rot, map_key)
-            next_text += f"{map_info['emoji']} **{map_info['name']}:** {status}\n"
+            next_lines.append(f"{map_info['emoji']} **{map_info['name']}**\n{status}")
 
-        embed.add_field(name=next_heading, value=next_text, inline=False)
+        embed.add_field(
+            name=next_heading,
+            value="\n\n".join(next_lines),
+            inline=False,
+        )
+
+        if highlight_maps and previous:
+            change_lines = []
+            for map_key in sorted(highlight_maps, key=lambda k: self.MAPS[k]["name"]):
+                map_info = self.MAPS[map_key]
+                prev_status = self._get_map_status(previous, map_key)
+                curr_status = self._get_map_status(current, map_key)
+                change_lines.append(
+                    f"{map_info['emoji']} **{map_info['name']}**\n"
+                    f"~~{prev_status}~~ → **{curr_status}**"
+                )
+            embed.add_field(
+                name="\U0001F504 Just Changed",
+                value="\n\n".join(change_lines),
+                inline=False,
+            )
+            embed.color = 0xFF6B35
+
+        active_preview = None
+        for map_key in self.MAPS:
+            if map_key in highlight_maps and map_key in self.MAP_PREVIEWS:
+                active_preview = self.MAP_PREVIEWS[map_key]
+                break
+        if not active_preview:
+            active_preview = self.MAP_PREVIEWS.get("dam")
+        if active_preview:
+            embed.set_thumbnail(url=active_preview)
 
         embed.set_footer(text=self._data_footer(now.strftime("Updated %H:%M UTC")))
         embed.timestamp = now
@@ -368,47 +414,6 @@ class ArcRaiders(commands.Cog):
         filter_set = {event.lower() for event in notify_events}
         return any(event.lower() in filter_set for event in changed_events)
 
-    def _build_map_change_embed(
-        self, map_key: str, previous: dict, current: dict, when: datetime
-    ) -> discord.Embed:
-        map_info = self.MAPS[map_key]
-        prev_status = self._get_map_status(previous, map_key)
-        curr_status = self._get_map_status(current, map_key)
-
-        embed = discord.Embed(
-            title=f"\U0001F504 {map_info['emoji']} {map_info['name']} — Rotation Changed",
-            description=(
-                f"**{when.strftime('%H:%M UTC')}**\n\n"
-                f"**Before:** {prev_status}\n"
-                f"**Now:** {curr_status}"
-            ),
-            color=0xFF6B35,
-        )
-        embed.set_footer(text=self._data_footer("Arc Raiders map rotation update"))
-        embed.timestamp = when
-        return embed
-
-    def _build_rotation_change_embed(
-        self, changed_map_keys: List[str], previous: dict, current: dict, when: datetime
-    ) -> discord.Embed:
-        embed = discord.Embed(
-            title="\U0001F504 Arc Raiders Map Rotation Update",
-            description=f"**{when.strftime('%H:%M UTC')}** — the following maps changed:",
-            color=0xFF6B35,
-        )
-        for map_key in changed_map_keys:
-            map_info = self.MAPS[map_key]
-            prev_status = self._get_map_status(previous, map_key)
-            curr_status = self._get_map_status(current, map_key)
-            embed.add_field(
-                name=f"{map_info['emoji']} {map_info['name']}",
-                value=f"**Before:** {prev_status}\n**Now:** {curr_status}",
-                inline=False,
-            )
-        embed.set_footer(text=self._data_footer("Arc Raiders rotation alert"))
-        embed.timestamp = when
-        return embed
-
     def _build_key_embed(self, key: dict, *, disambiguate: bool = False) -> discord.Embed:
         map_data = MAP_INFO[key["map"]]
         rarity = key.get("rarity", "uncommon")
@@ -482,7 +487,103 @@ class ArcRaiders(commands.Cog):
         embed.set_footer(text="Add a map name, e.g. arc key control tower dam")
         await ctx.send(embed=embed)
 
-    async def _update_auto_embeds(self):
+    def _guild_highlight_maps(
+        self, guild_settings: dict, previous: dict, current: dict
+    ) -> Set[str]:
+        allowed_maps = None
+        notify_maps = guild_settings.get("notify_maps") or []
+        if notify_maps:
+            allowed_maps = set()
+            for map_name in notify_maps:
+                resolved = self._resolve_map_key(map_name)
+                if resolved:
+                    allowed_maps.add(resolved)
+
+        notify_events = guild_settings.get("notify_events") or []
+        changed = self._changed_maps(previous, current, allowed_maps)
+        if notify_events:
+            changed = [
+                map_key
+                for map_key in changed
+                if self._passes_event_filter(previous, current, map_key, notify_events)
+            ]
+        return set(changed)
+
+    async def _clean_bot_messages(
+        self, channel: discord.TextChannel, keep_message_id: int
+    ) -> None:
+        try:
+            async for message in channel.history(limit=100):
+                if message.id == keep_message_id:
+                    continue
+                if message.author.id != self.bot.user.id:
+                    continue
+                try:
+                    await message.delete()
+                except (discord.Forbidden, discord.HTTPException):
+                    pass
+        except (discord.Forbidden, discord.HTTPException):
+            pass
+
+    async def _post_or_edit_live_message(
+        self,
+        channel: discord.abc.Messageable,
+        *,
+        message_id: Optional[int],
+        embed: discord.Embed,
+        clean_channel: bool = False,
+    ) -> Optional[int]:
+        view = ArcRaidersRefreshView(self)
+        if not isinstance(channel, discord.TextChannel):
+            return message_id
+
+        try:
+            if message_id:
+                try:
+                    message = await channel.fetch_message(message_id)
+                    await message.edit(embed=embed, view=view)
+                    if clean_channel:
+                        await self._clean_bot_messages(channel, message.id)
+                    return message.id
+                except discord.NotFound:
+                    pass
+
+            message = await channel.send(embed=embed, view=view)
+            if clean_channel:
+                await self._clean_bot_messages(channel, message.id)
+            return message.id
+        except (discord.Forbidden, discord.HTTPException):
+            return message_id
+
+    async def _refresh_channel_embed(
+        self,
+        channel: discord.TextChannel,
+        *,
+        message_id: Optional[int],
+        clean_channel: bool,
+        highlight_maps: Optional[Set[str]] = None,
+        previous: Optional[dict] = None,
+        force_fetch: bool = False,
+    ) -> Optional[int]:
+        if force_fetch:
+            await self.schedule.refresh(force=True)
+        embed = self._build_overview_embed(
+            highlight_maps=highlight_maps,
+            previous=previous,
+        )
+        return await self._post_or_edit_live_message(
+            channel,
+            message_id=message_id,
+            embed=embed,
+            clean_channel=clean_channel,
+        )
+
+    async def _update_auto_embeds(
+        self,
+        *,
+        highlight_maps: Optional[Set[str]] = None,
+        previous: Optional[dict] = None,
+    ):
         """Refresh pinned/live rotation embeds in configured guild channels."""
         all_guilds = await self.config.all_guilds()
         for guild_id, settings in all_guilds.items():
@@ -494,32 +595,28 @@ class ArcRaiders(commands.Cog):
                 continue
 
             channel = guild.get_channel(settings.get("auto_channel_id"))
-            if not channel:
+            if not isinstance(channel, discord.TextChannel):
                 continue
 
-            message_id = settings.get("auto_message_id")
+            message_id = await self._refresh_channel_embed(
+                channel,
+                message_id=settings.get("auto_message_id"),
+                clean_channel=settings.get("auto_clean_channel", False),
+                highlight_maps=highlight_maps,
+                previous=previous,
+            )
+            if message_id and message_id != settings.get("auto_message_id"):
+                await self.config.guild(guild).auto_message_id.set(message_id)
 
-            try:
-                embed = self._build_overview_embed()
-
-                if message_id:
-                    try:
-                        message = await channel.fetch_message(message_id)
-                        await message.edit(embed=embed)
-                    except discord.NotFound:
-                        msg = await channel.send(embed=embed)
-                        await self.config.guild(guild).auto_message_id.set(msg.id)
-                else:
-                    msg = await channel.send(embed=embed)
-                    await self.config.guild(guild).auto_message_id.set(msg.id)
-
-            except (discord.Forbidden, discord.HTTPException):
-                pass
-
-    async def _send_change_notifications(self, previous: dict, current: dict):
-        """Post rotation change alerts to configured notification channels."""
-        when = datetime.now(timezone.utc)
+    async def _update_notify_embeds(
+        self,
+        *,
+        highlight_maps_by_guild: Optional[Dict[int, Set[str]]] = None,
+        previous: Optional[dict] = None,
+    ):
+        """Refresh live rotation embeds in notification channels."""
         all_guilds = await self.config.all_guilds()
+        highlight_maps_by_guild = highlight_maps_by_guild or {}
 
         for guild_id, settings in all_guilds.items():
             if not settings.get("notify_enabled"):
@@ -533,53 +630,107 @@ class ArcRaiders(commands.Cog):
             if not guild:
                 continue
 
-            allowed_maps = None
-            notify_maps = settings.get("notify_maps") or []
-            if notify_maps:
-                allowed_maps = set()
-                for map_name in notify_maps:
-                    resolved = self._resolve_map_key(map_name)
-                    if resolved:
-                        allowed_maps.add(resolved)
-
-            notify_events = settings.get("notify_events") or []
-            changed = self._changed_maps(previous, current, allowed_maps)
-            if notify_events:
-                changed = [
-                    map_key
-                    for map_key in changed
-                    if self._passes_event_filter(previous, current, map_key, notify_events)
-                ]
-
-            if not changed:
-                continue
-
-            per_map = settings.get("notify_per_map", False)
-            if per_map:
-                embeds = [
-                    self._build_map_change_embed(map_key, previous, current, when)
-                    for map_key in changed
-                ]
-            else:
-                embeds = [self._build_rotation_change_embed(changed, previous, current, when)]
+            stored_ids = dict(settings.get("notify_message_ids") or {})
+            highlight_maps = highlight_maps_by_guild.get(guild_id)
+            updated_ids = dict(stored_ids)
 
             for channel_id in channel_ids:
                 channel = guild.get_channel(channel_id)
-                if not channel:
+                if not isinstance(channel, discord.TextChannel):
                     continue
-                try:
-                    for embed in embeds:
-                        await channel.send(embed=embed)
-                except (discord.Forbidden, discord.HTTPException):
-                    pass
 
-        await self.config.last_notified_snapshot.set(self._rotation_snapshot(current))
+                message_id = stored_ids.get(str(channel_id))
+                new_id = await self._refresh_channel_embed(
+                    channel,
+                    message_id=message_id,
+                    clean_channel=settings.get("notify_clean_channel", False),
+                    highlight_maps=highlight_maps,
+                    previous=previous,
+                )
+                if new_id:
+                    updated_ids[str(channel_id)] = new_id
 
-    async def _any_notify_enabled(self) -> bool:
-        for settings in (await self.config.all_guilds()).values():
-            if settings.get("notify_enabled") and settings.get("notify_channel_ids"):
-                return True
-        return False
+            if updated_ids != stored_ids:
+                await self.config.guild(guild).notify_message_ids.set(updated_ids)
+
+    async def _handle_manual_refresh(
+        self, interaction: discord.Interaction
+    ) -> None:
+        if not interaction.guild or not isinstance(interaction.channel, discord.TextChannel):
+            await interaction.followup.send("Use this button in a server channel.", ephemeral=True)
+            return
+
+        await self.schedule.refresh(force=True)
+        guild_conf = self.config.guild(interaction.guild)
+        settings = await guild_conf.all()
+        channel_id = interaction.channel.id
+        highlight_maps: Optional[Set[str]] = None
+        previous: Optional[dict] = None
+
+        if settings.get("notify_enabled") and channel_id in (settings.get("notify_channel_ids") or []):
+            current = self._get_current_rotation()
+            last_snapshot = await self.config.last_notified_snapshot()
+            if last_snapshot:
+                previous = self._rotation_from_snapshot(
+                    last_snapshot, current.get("hour", self._get_current_hour())
+                )
+                highlight_maps = self._guild_highlight_maps(settings, previous, current)
+
+            stored_ids = dict(settings.get("notify_message_ids") or {})
+            message_id = stored_ids.get(str(channel_id)) or (
+                interaction.message.id if interaction.message else None
+            )
+            new_id = await self._refresh_channel_embed(
+                interaction.channel,
+                message_id=message_id,
+                clean_channel=settings.get("notify_clean_channel", False),
+                highlight_maps=highlight_maps,
+                previous=previous,
+                force_fetch=False,
+            )
+            if new_id:
+                stored_ids[str(channel_id)] = new_id
+                await guild_conf.notify_message_ids.set(stored_ids)
+        elif (
+            settings.get("auto_enabled")
+            and settings.get("auto_channel_id") == channel_id
+        ):
+            message_id = settings.get("auto_message_id") or (
+                interaction.message.id if interaction.message else None
+            )
+            new_id = await self._refresh_channel_embed(
+                interaction.channel,
+                message_id=message_id,
+                clean_channel=settings.get("auto_clean_channel", False),
+                force_fetch=False,
+            )
+            if new_id and new_id != settings.get("auto_message_id"):
+                await guild_conf.auto_message_id.set(new_id)
+        elif interaction.message:
+            embed = self._build_overview_embed()
+            await interaction.message.edit(
+                embed=embed, view=ArcRaidersRefreshView(self)
+            )
+
+        source = "live API" if self._using_live_data() else "fallback schedule"
+        await interaction.followup.send(
+            f"\U0001F504 Rotation refreshed from the {source}.",
+            ephemeral=True,
+        )
+
+    async def _ensure_notify_channel_embed(self, guild: discord.Guild, channel: discord.TextChannel):
+        settings = await self.config.guild(guild).all()
+        stored_ids = dict(settings.get("notify_message_ids") or {})
+        channel_key = str(channel.id)
+        message_id = stored_ids.get(channel_key)
+        new_id = await self._refresh_channel_embed(
+            channel,
+            message_id=message_id,
+            clean_channel=settings.get("notify_clean_channel", False),
+        )
+        if new_id:
+            stored_ids[channel_key] = new_id
+            await self.config.guild(guild).notify_message_ids.set(stored_ids)
 
     @commands.group(name="arc", invoke_without_command=True)
     @commands.guild_only()
@@ -603,8 +754,8 @@ class ArcRaiders(commands.Cog):
             f"`{p}arc key <name>` — door location + directions\n"
             f"`{p}arc keys [map]` — list keys\n\n"
             f"**Admin (Manage Server)**\n"
-            f"`{p}arc auto channel` · `{p}arc auto enable`\n"
-            f"`{p}arc notify add` · `{p}arc notify enable` · `{p}arc notify test`"
+            f"`{p}arc auto channel` · `{p}arc auto enable` · `{p}arc auto clean`\n"
+            f"`{p}arc notify add` · `{p}arc notify enable` · `{p}arc notify clean` · `{p}arc notify setup`"
         )
         embed.set_footer(text=self._data_footer())
         await ctx.send(embed=embed)
@@ -898,7 +1049,12 @@ class ArcRaiders(commands.Cog):
         embed = discord.Embed(title="Arc Raiders Auto-Update Settings", color=0x7B68EE)
         embed.add_field(name="Enabled", value="Yes" if settings["auto_enabled"] else "No", inline=True)
         embed.add_field(name="Channel", value=channel.mention if channel else "Not set", inline=True)
-        embed.set_footer(text="Use subcommands: enable, disable, channel")
+        embed.add_field(
+            name="Clean channel",
+            value="Yes" if settings.get("auto_clean_channel") else "No",
+            inline=True,
+        )
+        embed.set_footer(text="Use subcommands: enable, disable, channel, clean")
         await ctx.send(embed=embed)
 
     @arc_auto.command(name="channel")
@@ -921,14 +1077,28 @@ class ArcRaiders(commands.Cog):
             await ctx.send("Please set a channel first with `arc auto channel #channel`.")
             return
         await self.config.guild(ctx.guild).auto_enabled.set(True)
-        await ctx.send("Auto-updates enabled. The live rotation embed will refresh when events change.")
+        await ctx.send(
+            "Auto-updates enabled. One live embed will stay in the channel and refresh when events change."
+        )
 
-        # Post initial message
         channel = ctx.guild.get_channel(channel_id)
-        if channel:
-            embed = self._build_overview_embed()
-            msg = await channel.send(embed=embed)
-            await self.config.guild(ctx.guild).auto_message_id.set(msg.id)
+        if isinstance(channel, discord.TextChannel):
+            settings = await self.config.guild(ctx.guild).all()
+            message_id = await self._refresh_channel_embed(
+                channel,
+                message_id=settings.get("auto_message_id"),
+                clean_channel=settings.get("auto_clean_channel", False),
+            )
+            if message_id:
+                await self.config.guild(ctx.guild).auto_message_id.set(message_id)
+
+    @arc_auto.command(name="clean")
+    @commands.admin_or_permissions(manage_guild=True)
+    async def arc_auto_clean(self, ctx: commands.Context, enabled: bool):
+        """Delete the bot's other messages in the auto channel when the embed updates."""
+        await self.config.guild(ctx.guild).auto_clean_channel.set(enabled)
+        state = "enabled" if enabled else "disabled"
+        await ctx.send(f"Auto channel cleanup {state}.")
 
     @arc_auto.command(name="disable")
     @commands.admin_or_permissions(manage_guild=True)
@@ -957,8 +1127,8 @@ class ArcRaiders(commands.Cog):
             inline=True,
         )
         embed.add_field(
-            name="Post style",
-            value="One message per map" if settings.get("notify_per_map") else "Single summary message",
+            name="Clean channel",
+            value="Yes" if settings.get("notify_clean_channel") else "No",
             inline=True,
         )
         embed.add_field(
@@ -976,7 +1146,7 @@ class ArcRaiders(commands.Cog):
             value=", ".join(notify_events) if notify_events else "Any change",
             inline=False,
         )
-        embed.set_footer(text="Posts when live map events change (MetaForge schedule)")
+        embed.set_footer(text="One live embed per channel — updates in place when rotations change")
         await ctx.send(embed=embed)
 
     @arc_notify.command(name="add", aliases=["addchannel"])
@@ -997,7 +1167,9 @@ class ArcRaiders(commands.Cog):
             return
         channel_ids.append(resolved.id)
         await self.config.guild(ctx.guild).notify_channel_ids.set(channel_ids)
-        await ctx.send(f"Added {resolved.mention} for rotation alerts.")
+        await ctx.send(f"Added {resolved.mention} for live rotation embeds.")
+        if await self.config.guild(ctx.guild).notify_enabled():
+            await self._ensure_notify_channel_embed(ctx.guild, resolved)
 
     @arc_notify.command(name="remove", aliases=["removechannel", "del", "delete"])
     @commands.admin_or_permissions(manage_guild=True)
@@ -1013,7 +1185,10 @@ class ArcRaiders(commands.Cog):
             return
         channel_ids.remove(resolved.id)
         await self.config.guild(ctx.guild).notify_channel_ids.set(channel_ids)
-        await ctx.send(f"Removed {resolved.mention} from rotation alerts.")
+        stored_ids = dict(await self.config.guild(ctx.guild).notify_message_ids())
+        stored_ids.pop(str(resolved.id), None)
+        await self.config.guild(ctx.guild).notify_message_ids.set(stored_ids)
+        await ctx.send(f"Removed {resolved.mention} from live rotation embeds.")
 
     @arc_notify.command(name="channels", aliases=["list", "listchannels"])
     @commands.admin_or_permissions(manage_guild=True)
@@ -1039,8 +1214,12 @@ class ArcRaiders(commands.Cog):
             return
         await self.config.guild(ctx.guild).notify_enabled.set(True)
         await ctx.send(
-            "Rotation notifications enabled. The bot will post when live map events change."
+            "Live rotation embeds enabled. One embed per channel will update in place — no hourly spam."
         )
+        for channel_id in channel_ids:
+            channel = ctx.guild.get_channel(channel_id)
+            if isinstance(channel, discord.TextChannel):
+                await self._ensure_notify_channel_embed(ctx.guild, channel)
 
     @arc_notify.command(name="disable")
     @commands.admin_or_permissions(manage_guild=True)
@@ -1055,7 +1234,7 @@ class ArcRaiders(commands.Cog):
         """Set which maps to watch (leave empty for all maps)."""
         if not map_names or map_names[0].lower() in ("all", "clear", "reset"):
             await self.config.guild(ctx.guild).notify_maps.set([])
-            await ctx.send("Map filter cleared — all maps will trigger notifications.")
+            await ctx.send("Map filter cleared — all map changes will be highlighted.")
             return
 
         invalid = []
@@ -1072,7 +1251,7 @@ class ArcRaiders(commands.Cog):
             return
 
         await self.config.guild(ctx.guild).notify_maps.set(valid)
-        await ctx.send(f"Notifications limited to: {', '.join(valid)}")
+        await ctx.send(f"Live embed highlights limited to: {', '.join(valid)}")
 
     @arc_notify.command(name="events")
     @commands.admin_or_permissions(manage_guild=True)
@@ -1080,7 +1259,7 @@ class ArcRaiders(commands.Cog):
         """Set which events trigger alerts (leave empty for any change)."""
         if not event_names or event_names[0].lower() in ("all", "clear", "reset"):
             await self.config.guild(ctx.guild).notify_events.set([])
-            await ctx.send("Event filter cleared — any rotation change will notify.")
+            await ctx.send("Event filter cleared — any rotation change will be highlighted.")
             return
 
         invalid = []
@@ -1102,41 +1281,43 @@ class ArcRaiders(commands.Cog):
             return
 
         await self.config.guild(ctx.guild).notify_events.set(valid)
-        await ctx.send(f"Notifications limited to events involving: {', '.join(valid)}")
+        await ctx.send(f"Live embed highlights limited to events involving: {', '.join(valid)}")
 
-    @arc_notify.command(name="style")
+    @arc_notify.command(name="clean")
     @commands.admin_or_permissions(manage_guild=True)
-    async def arc_notify_style(self, ctx: commands.Context, style: str):
-        """Set post style: `summary` (one message) or `permap` (one message per map)."""
-        style = style.lower()
-        if style in ("summary", "single", "one"):
-            await self.config.guild(ctx.guild).notify_per_map.set(False)
-            await ctx.send("Notification style set to a single summary message.")
-        elif style in ("permap", "per", "map", "separate"):
-            await self.config.guild(ctx.guild).notify_per_map.set(True)
-            await ctx.send("Notification style set to one message per changed map.")
-        else:
-            await ctx.send("Use `summary` or `permap`.")
+    async def arc_notify_clean(self, ctx: commands.Context, enabled: bool):
+        """Delete the bot's other messages in notify channels when the embed updates."""
+        await self.config.guild(ctx.guild).notify_clean_channel.set(enabled)
+        state = "enabled" if enabled else "disabled"
+        await ctx.send(f"Notify channel cleanup {state}.")
+
+    @arc_notify.command(name="setup", aliases=["refresh", "post"])
+    @commands.admin_or_permissions(manage_guild=True)
+    async def arc_notify_setup(self, ctx: commands.Context):
+        """Post or refresh the live embed in all configured notify channels."""
+        channel_ids = await self.config.guild(ctx.guild).notify_channel_ids()
+        if not channel_ids:
+            await ctx.send("Add at least one channel with `arc notify add` first.")
+            return
+        posted = 0
+        for channel_id in channel_ids:
+            channel = ctx.guild.get_channel(channel_id)
+            if isinstance(channel, discord.TextChannel):
+                await self._ensure_notify_channel_embed(ctx.guild, channel)
+                posted += 1
+        await ctx.send(f"Posted/refreshed the live embed in {posted} channel(s).")
 
     @arc_notify.command(name="test")
     @commands.admin_or_permissions(manage_guild=True)
     async def arc_notify_test(self, ctx: commands.Context):
-        """Preview what a rotation alert looks like in this channel."""
+        """Preview the live rotation embed in this channel."""
         await self.schedule.refresh()
-        current = self._get_current_rotation()
-        previous = self._last_rotation or current
-        changed = self._changed_maps(previous, current)
-        if not changed:
-            changed = list(self.MAPS.keys())[:2]
-
-        embed = self._build_rotation_change_embed(
-            changed, previous, current, datetime.now(timezone.utc)
-        )
-        embed.title = "\U0001F9EA Test — Arc Raiders Rotation Notification"
-        await ctx.send(embed=embed)
+        embed = self._build_overview_embed()
+        embed.title = "\U0001F9EA Test — Arc Raiders Live Rotation"
+        await ctx.send(embed=embed, view=ArcRaidersRefreshView(self))
 
     async def _auto_update_loop(self):
-        """Poll MetaForge and post alerts when live map events change."""
+        """Poll MetaForge and refresh live embeds when map events change."""
         await self.bot.wait_until_ready()
 
         while True:
@@ -1146,17 +1327,31 @@ class ArcRaiders(commands.Cog):
                 snapshot = self._rotation_snapshot(current)
                 last_snapshot = await self.config.last_notified_snapshot()
 
-                await self._update_auto_embeds()
+                previous = None
+                highlight_maps_by_guild: Dict[int, Set[str]] = {}
+                global_highlights: Optional[Set[str]] = None
+                if last_snapshot and last_snapshot != snapshot:
+                    previous = self._rotation_from_snapshot(
+                        last_snapshot, current.get("hour", self._get_current_hour())
+                    )
+                    global_highlights = set(self._changed_maps(previous, current))
+                    all_guilds = await self.config.all_guilds()
+                    for guild_id, settings in all_guilds.items():
+                        if not settings.get("notify_enabled"):
+                            continue
+                        highlights = self._guild_highlight_maps(settings, previous, current)
+                        if highlights:
+                            highlight_maps_by_guild[guild_id] = highlights
+                    await self.config.last_notified_snapshot.set(snapshot)
 
-                if last_snapshot != snapshot:
-                    if last_snapshot:
-                        previous = self._rotation_from_snapshot(
-                            last_snapshot, current.get("hour", self._get_current_hour())
-                        )
-                        await self._send_change_notifications(previous, current)
-                    else:
-                        await self.config.last_notified_snapshot.set(snapshot)
-                    self._last_rotation = current
+                await self._update_auto_embeds(
+                    highlight_maps=global_highlights,
+                    previous=previous,
+                )
+                await self._update_notify_embeds(
+                    highlight_maps_by_guild=highlight_maps_by_guild,
+                    previous=previous,
+                )
 
                 await asyncio.sleep(60)
 
@@ -1165,3 +1360,30 @@ class ArcRaiders(commands.Cog):
             except Exception as exc:
                 log.exception("Arc Raiders update loop error: %s", exc)
                 await asyncio.sleep(60)
+
+
+class ArcRaidersRefreshView(discord.ui.View):
+    """Persistent Update button for live rotation embeds."""
+
+    def __init__(self, cog: ArcRaiders):
+        super().__init__(timeout=None)
+        self.cog = cog
+
+    @discord.ui.button(
+        label="Update",
+        style=discord.ButtonStyle.primary,
+        emoji="\U0001F504",
+        custom_id="arcraiders_rotation_refresh",
+    )
+    async def refresh_button(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
+        await interaction.response.defer(ephemeral=True)
+        try:
+            await self.cog._handle_manual_refresh(interaction)
+        except Exception as exc:
+            log.exception("Arc Raiders manual refresh failed: %s", exc)
+            await interaction.followup.send(
+                "Could not refresh the rotation. Try again in a moment.",
+                ephemeral=True,
+            )
