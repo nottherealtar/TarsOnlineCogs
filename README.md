@@ -110,6 +110,7 @@ Full-featured server management cog with:
 Track Arc Raiders game map rotations:
 - View current and upcoming map conditions
 - Search by map or event type
+- Key lookup for all 6 maps including Riven Tides hotel and Port Authority keys
 - Live MetaForge schedule with UTC fallback
 - One persistent auto-updating embed per channel with an Update button
 - Optional channel cleanup to remove old bot messages

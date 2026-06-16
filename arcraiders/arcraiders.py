@@ -22,6 +22,7 @@ from .keys_data import (
     RARITY_LABELS,
     get_key_by_id,
     list_key_names,
+    rotation_map_to_key_map,
     search_keys,
 )
 from .metaforge import METAFORGE_ATTRIBUTION, MetaForgeSchedule
@@ -1007,19 +1008,25 @@ class ArcRaiders(commands.Cog):
         """List all known keys, optionally filtered by map."""
         map_filter = None
         if map_name:
-            map_filter = self._resolve_map_key(map_name)
-            if not map_filter:
+            rotation_key = self._resolve_map_key(map_name)
+            if not rotation_key:
                 map_list = ", ".join(info["name"] for info in self.MAPS.values())
                 await ctx.send(f"Map not found. Available maps: {map_list}")
                 return
+            map_filter = rotation_map_to_key_map(rotation_key)
+            if not map_filter:
+                await ctx.send(f"No key data is available for **{self.MAPS[rotation_key]['name']}** yet.")
+                return
 
         embed = discord.Embed(title="\U0001F511 Arc Raiders Keys", color=0x7B68EE)
+        shown_maps = 0
         for map_id, map_data in MAP_INFO.items():
             if map_filter and map_id != map_filter:
                 continue
             map_keys = [k for k in KEYS if k["map"] == map_id]
             if not map_keys:
                 continue
+            shown_maps += 1
             entries = []
             seen = set()
             for key in map_keys:
@@ -1034,6 +1041,10 @@ class ArcRaiders(commands.Cog):
                 value="\n".join(entries) if entries else "None",
                 inline=False,
             )
+
+        if shown_maps == 0:
+            await ctx.send("No keys found for that map.")
+            return
 
         embed.set_footer(text="Use [p]arc key <name> for location images and directions")
         await ctx.send(embed=embed)

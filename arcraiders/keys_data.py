@@ -10,6 +10,7 @@ MAP_INFO = {
     "buried_city": {"name": "Buried City", "preview": f"{BLOB}/images/preview/buried_city.jpg"},
     "blue_gate": {"name": "Blue Gate", "preview": f"{BLOB}/images/preview/blue_gate_zoomed.jpg"},
     "stella_montis": {"name": "Stella Montis", "preview": f"{BLOB}/images/preview/stella_montis.jpg"},
+    "riven_tides": {"name": "Riven Tides"},
 }
 
 RARITY_COLORS = {
@@ -280,6 +281,137 @@ KEYS = [
         "instructions": "Natural choke points — highly dangerous.",
     },
     {
+        "id": "rt_hotel_102",
+        "map": "riven_tides",
+        "name": "Riven Tides Hotel Keycard No. 102",
+        "rarity": "uncommon",
+        "location": "Hotel Panorama Azzurro — Floor 1, West Wing",
+        "description": "Unlocks Room 102 in Hotel Panorama Azzurro on Riven Tides.",
+        "instructions": (
+            "End of the west-wing hallway on Floor 1, right next to Room 103. Pairs well with "
+            "Room 103 for a quick west-wing double clear."
+        ),
+    },
+    {
+        "id": "rt_hotel_103",
+        "map": "riven_tides",
+        "name": "Riven Tides Hotel Keycard No. 103",
+        "rarity": "uncommon",
+        "location": "Hotel Panorama Azzurro — Floor 1, West Wing",
+        "description": "Unlocks Room 103 in Hotel Panorama Azzurro on Riven Tides.",
+        "instructions": (
+            "West-wing hallway on Floor 1, the door right next to Room 102. Quiet mid-tier loot "
+            "run — good for budget loadouts."
+        ),
+    },
+    {
+        "id": "rt_hotel_107",
+        "map": "riven_tides",
+        "name": "Riven Tides Hotel Keycard No. 107",
+        "rarity": "epic",
+        "location": "Hotel Panorama Azzurro — Floor 1, Central",
+        "description": "Unlocks Room 107 in Hotel Panorama Azzurro on Riven Tides.",
+        "instructions": (
+            "Central section of Floor 1 — large double-bed suite with a balcony view. Best "
+            "keycard on the map: high-tier weapons and an under-bed safe that is guaranteed to "
+            "contain the Room 208 keycard on your first visit. Open 107 first, then chain into 208."
+        ),
+    },
+    {
+        "id": "rt_hotel_113",
+        "map": "riven_tides",
+        "name": "Riven Tides Hotel Keycard No. 113",
+        "rarity": "uncommon",
+        "location": "Hotel Panorama Azzurro — Floor 1, East Wing",
+        "description": "Unlocks Room 113 in Hotel Panorama Azzurro on Riven Tides.",
+        "instructions": "End of the east-wing hallway on Floor 1.",
+    },
+    {
+        "id": "rt_hotel_205",
+        "map": "riven_tides",
+        "name": "Riven Tides Hotel Keycard No. 205",
+        "rarity": "epic",
+        "location": "Hotel Panorama Azzurro — Floor 2, Central",
+        "description": "Unlocks Room 205 in Hotel Panorama Azzurro on Riven Tides.",
+        "instructions": (
+            "Central Floor 2 near the zipline. Turret-guarded interior — clear the turret before "
+            "opening the door."
+        ),
+    },
+    {
+        "id": "rt_hotel_208",
+        "map": "riven_tides",
+        "name": "Riven Tides Hotel Keycard No. 208",
+        "rarity": "epic",
+        "location": "Hotel Panorama Azzurro — Floor 2, Central-East",
+        "description": "Unlocks Room 208 in Hotel Panorama Azzurro on Riven Tides.",
+        "instructions": (
+            "Central-east Floor 2 — multi-room suite, the largest locked area on Riven Tides. "
+            "Often obtained from the safe under the bed in Room 107 on your first visit."
+        ),
+    },
+    {
+        "id": "rt_hotel_311",
+        "map": "riven_tides",
+        "name": "Riven Tides Hotel Keycard No. 311",
+        "rarity": "rare",
+        "location": "Hotel Panorama Azzurro — Floor 3, East Tower",
+        "description": "Unlocks Room 311 in Hotel Panorama Azzurro on Riven Tides.",
+        "instructions": (
+            "Base of the tall east-tower stairs on Floor 3. Chain with Room 404 up the east tower "
+            "for a penthouse-tier run."
+        ),
+    },
+    {
+        "id": "rt_hotel_404",
+        "map": "riven_tides",
+        "name": "Riven Tides Hotel Keycard No. 404",
+        "rarity": "epic",
+        "location": "Hotel Panorama Azzurro — Floor 4, West Wing",
+        "description": "Unlocks Room 404 in Hotel Panorama Azzurro on Riven Tides.",
+        "instructions": (
+            "End of the top-floor west hallway — penthouse-tier room. Reach via the east-tower "
+            "stairwell from Floor 3 (Room 311 chain)."
+        ),
+    },
+    {
+        "id": "rt_crane_house",
+        "map": "riven_tides",
+        "name": "Riven Tides Crane House Keycard",
+        "rarity": "uncommon",
+        "location": "Stacking Yard — Top of Middle Crane",
+        "description": "Unlocks the Crane House at the Stacking Yard on Riven Tides.",
+        "instructions": (
+            "South-central building at the Stacking Yard in the eastern part of the map. Reach the "
+            "top of the middle crane via zipline or ladders."
+        ),
+    },
+    {
+        "id": "rt_classified_records",
+        "map": "riven_tides",
+        "name": "Riven Tides Classified Records Keycard",
+        "rarity": "rare",
+        "location": "Port Authority Building — Main Floor",
+        "description": "Unlocks the Classified Records room in the Port Authority Building.",
+        "instructions": (
+            "Northwestern Port Authority Building. The room is at the bottom of the U-shaped corridor "
+            "on the main floor — a Sentry often guards the locked doors upstairs."
+        ),
+    },
+    {
+        "id": "rt_secure_storage",
+        "map": "riven_tides",
+        "name": "Riven Tides Secure Storage Keycard",
+        "rarity": "epic",
+        "location": "Port Authority Building — Secure Storage",
+        "description": "Unlocks the Secure Storage room in the Port Authority Building.",
+        "instructions": (
+            "Inside the Port Authority Building, near the Classified Records room. Often run as a "
+            "dual-keycard route: clear the turret once, then open Classified Records and Secure "
+            "Storage back to back."
+        ),
+    },
+    {
         "id": "hatch_dam_1",
         "map": "dam",
         "name": "Raider Hatch Key",
@@ -384,7 +516,22 @@ MAP_QUERY_ALIASES = {
     "buried_city": ("buriedcity", "buried", "city", "bc"),
     "blue_gate": ("bluegate", "blue", "bg", "gate"),
     "stella_montis": ("stellamontis", "stella", "montis", "sm"),
+    "riven_tides": ("riventides", "riven", "tides", "rt", "panorama", "hotel"),
 }
+
+# Rotation tracker map keys (arcraiders.MAPS) → keys_data map ids
+ROTATION_TO_KEY_MAP = {
+    "dam": "dam",
+    "buriedCity": "buried_city",
+    "spaceport": "spaceport",
+    "blueGate": "blue_gate",
+    "stellaMontis": "stella_montis",
+    "rivenTides": "riven_tides",
+}
+
+
+def rotation_map_to_key_map(rotation_key: str) -> str | None:
+    return ROTATION_TO_KEY_MAP.get(rotation_key)
 
 KEY_ALIASES = {
     "staff room": "dam_staff_room",
@@ -410,6 +557,17 @@ KEY_ALIASES = {
     "medical storage": "sm_medical",
     "archives": "sm_archives",
     "security checkpoint": "sm_security",
+    "hotel 107": "rt_hotel_107",
+    "hotel 208": "rt_hotel_208",
+    "hotel 102": "rt_hotel_102",
+    "hotel 103": "rt_hotel_103",
+    "hotel 113": "rt_hotel_113",
+    "hotel 205": "rt_hotel_205",
+    "hotel 311": "rt_hotel_311",
+    "hotel 404": "rt_hotel_404",
+    "crane house": "rt_crane_house",
+    "classified records": "rt_classified_records",
+    "secure storage": "rt_secure_storage",
     "raider hatch": None,
     "hatch": None,
 }
