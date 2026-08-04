@@ -31,12 +31,15 @@ Then install what you need:
 [p]tarscafe info giveaways
 ```
 
+**Full checklist** (this repo + curated third-party cogs, AFK = `cooldownbuddy`, honeypot warnings): see **[INSTALL.md](INSTALL.md)**.
+
 | Goal | Commands |
 |------|----------|
 | Browse packages | `[p]cog list TarsOnlineCafe` |
 | In-bot guide | `[p]tarscafe` / `[p]tarscafe features` |
 | Red help | `[p]help <command>` or `[p]help <CogName>` |
 | Update cogs | `[p]repo update TarsOnlineCafe` then `[p]cog update` |
+| AFK / away | **`cooldownbuddy`** (`/brb`) — do not install a separate `afk` cog |
 
 ---
 

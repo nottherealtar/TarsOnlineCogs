@@ -210,10 +210,12 @@ class Tarscafe(commands.Cog):
             "```\n"
             "[p]repo add TarsOnlineCafe https://github.com/nottherealtar/TarsOnlineCogs\n"
             "[p]cog install TarsOnlineCafe tarscafe serverassistant levelroles "
-            "giveaways customcommands sticky\n"
-            "[p]load tarscafe serverassistant levelroles giveaways customcommands sticky\n"
+            "giveaways customcommands sticky cooldownbuddy\n"
+            "[p]load tarscafe serverassistant levelroles giveaways customcommands sticky cooldownbuddy\n"
             "```\n"
+            f"AFK = **cooldownbuddy** (`/brb`) — skip third-party `afk`.\n"
             f"Then `{ctx.clean_prefix}tarscafe features` for the command map.\n"
-            "Fun pack: `powerlevel cafeslots cafeblackjack beanduel roasttoast coffee chaoscoin`"
+            "Fun pack: `powerlevel cafeslots cafeblackjack beanduel roasttoast coffee chaoscoin`\n"
+            "Third-party + **honeypot warning**: see INSTALL.md on the GitHub repo."
         )
         await ctx.send(text)
