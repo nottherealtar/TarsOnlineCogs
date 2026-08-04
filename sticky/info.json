@@ -1,0 +1,18 @@
+{
+    "author": [
+        "nottherealtar"
+    ],
+    "install_msg": "`[p]sticky set Remember to grab a coffee` in a channel. Tune with `sticky threshold 3`. Help: `[p]sticky`.",
+    "name": "sticky",
+    "short": "Sticky channel messages that stay near the bottom",
+    "description": "MEE6-style sticky messages: set text per channel, bot reposts after N messages so the note stays near the bottom.",
+    "min_bot_version": "3.5.0",
+    "tags": [
+        "utility",
+        "sticky",
+        "mee6",
+        "moderation"
+    ],
+    "end_user_data_statement": "This cog stores per-channel sticky text, last sticky message id, message counter, and threshold. No user profile data.",
+    "type": "COG"
+}

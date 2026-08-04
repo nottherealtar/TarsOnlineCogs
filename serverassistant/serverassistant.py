@@ -239,7 +239,12 @@ class ServerAssistant(commands.Cog):
         hi = max(int(settings["leveling_xp_min"]), int(settings["leveling_xp_max"]))
         gain = random.randint(lo, hi)
         cur = await self.config.member(member).xp()
-        await self.config.member(member).xp.set(cur + gain)
+        new_xp = cur + gain
+        await self.config.member(member).xp.set(new_xp)
+        # Optional listeners (e.g. levelroles) can sync rewards without a second XP system.
+        old_level = _level_from_xp(cur)
+        new_level = _level_from_xp(new_xp)
+        self.bot.dispatch("tars_xp_gain", member, new_xp, old_level, new_level)
 
     async def _get_or_create_muted_role(self, guild: discord.Guild) -> discord.Role:
         muted_role = discord.utils.get(guild.roles, name="Muted")

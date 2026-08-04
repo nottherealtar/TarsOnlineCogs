@@ -1,0 +1,18 @@
+{
+    "author": [
+        "nottherealtar"
+    ],
+    "install_msg": "Create replies with `[p]cc add rules Welcome to the café!` then trigger with `[p]rules`. Help: `[p]cc`.",
+    "name": "customcommands",
+    "short": "MEE6-style custom text commands / tags",
+    "description": "Create per-guild custom commands triggered by your bot prefix. Add, edit, remove, list, optional embed mode. Does not override real bot commands.",
+    "min_bot_version": "3.5.0",
+    "tags": [
+        "utility",
+        "customcommands",
+        "mee6",
+        "tags"
+    ],
+    "end_user_data_statement": "This cog stores per-guild custom command names, response text, optional embed flag, and creator user id.",
+    "type": "COG"
+}

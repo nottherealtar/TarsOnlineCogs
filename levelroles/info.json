@@ -1,0 +1,18 @@
+{
+    "author": [
+        "nottherealtar"
+    ],
+    "install_msg": "MEE6-style level roles. **Requires `serverassistant` loaded** with leveling enabled. Start with `[p]levelrole` help, then `levelrole add 5 @Role`.",
+    "name": "levelroles",
+    "short": "Level role rewards using ServerAssistant XP",
+    "description": "Grants roles at ServerAssistant level thresholds. No second XP system — reads XP from serverassistant. Supports stack mode, unlock announcements, and sync/rejoin.",
+    "min_bot_version": "3.5.0",
+    "tags": [
+        "utility",
+        "leveling",
+        "roles",
+        "mee6"
+    ],
+    "end_user_data_statement": "This cog stores per-guild level-to-role reward mappings and an optional announce channel id. It does not store user XP (reads ServerAssistant).",
+    "type": "COG"
+}

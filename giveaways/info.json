@@ -1,0 +1,18 @@
+{
+    "author": [
+        "nottherealtar"
+    ],
+    "install_msg": "`[p]giveaway start 60 1 Nitro classic` — button enter, auto-end, reroll. See `[p]giveaway`.",
+    "name": "giveaways",
+    "short": "Button giveaways with timed end and reroll",
+    "description": "MEE6-style giveaways: start with duration and prize, members enter via button, automatic winner pick, early end, and reroll.",
+    "min_bot_version": "3.5.0",
+    "tags": [
+        "utility",
+        "giveaway",
+        "mee6",
+        "community"
+    ],
+    "end_user_data_statement": "This cog stores giveaway metadata and entrant user ids per giveaway message until the giveaway ends (entrants retained for reroll).",
+    "type": "COG"
+}

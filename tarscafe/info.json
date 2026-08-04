@@ -1,0 +1,18 @@
+{
+    "author": [
+        "nottherealtar"
+    ],
+    "install_msg": "Start here: `[p]tarscafe` · `[p]tarscafe features` · `[p]tarscafe list` · `[p]tarscafe install`. This cog makes the rest of the repo easier to discover.",
+    "name": "tarscafe",
+    "short": "Repo guide: feature map, cog list, install help",
+    "description": "In-bot documentation for TarsOnlineCafe — MEE6-style feature map, catalog of cogs with loaded status, per-cog install lines, and a recommended install block.",
+    "min_bot_version": "3.5.0",
+    "tags": [
+        "utility",
+        "help",
+        "guide",
+        "meta"
+    ],
+    "end_user_data_statement": "This cog does not persistently store any data or metadata about users.",
+    "type": "COG"
+}
