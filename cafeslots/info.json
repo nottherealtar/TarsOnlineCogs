@@ -1,0 +1,18 @@
+{
+    "author": [
+        "nottherealtar"
+    ],
+    "install_msg": "`/slots` to spin the café reels. `/slotsboard` for bragging rights. Tip points are fake — pride is real.",
+    "name": "cafeslots",
+    "short": "Café-themed slot machine with buttons",
+    "description": "Interactive 3-reel café slot machine (bean, cup, croissant, golden latte). Spin button with animation, tip-point scores, and guild leaderboards. No real currency.",
+    "min_bot_version": "3.5.0",
+    "tags": [
+        "fun",
+        "games",
+        "interactive",
+        "cafe"
+    ],
+    "end_user_data_statement": "This cog stores per-member slot spin counts and payout scores in each guild.",
+    "type": "COG"
+}

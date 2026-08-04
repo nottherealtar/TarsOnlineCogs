@@ -1,0 +1,19 @@
+{
+    "author": [
+        "nottherealtar"
+    ],
+    "install_msg": "`/beanduel @user` to challenge. Accept → pick Espresso / Latte / Cold Brew. `/beanduelboard` for the standings.",
+    "name": "beanduel",
+    "short": "Café brew duels (Espresso/Latte/Cold Brew RPS)",
+    "description": "Challenge another member to a button-based café duel. Accept/Decline, then secretly pick Espresso, Latte, or Cold Brew (rock-paper-scissors triangle). Rematch button and guild W/L board.",
+    "min_bot_version": "3.5.0",
+    "tags": [
+        "fun",
+        "games",
+        "interactive",
+        "social",
+        "cafe"
+    ],
+    "end_user_data_statement": "This cog stores per-member bean duel wins and losses in each guild.",
+    "type": "COG"
+}

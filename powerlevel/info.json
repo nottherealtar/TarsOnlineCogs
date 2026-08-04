@@ -1,0 +1,17 @@
+{
+    "author": [
+        "nottherealtar"
+    ],
+    "install_msg": "Try `/powerlevel` — Rescan, Saiyan Rank, and Compare buttons included. `/powerrecord` for hall of fame.",
+    "name": "powerlevel",
+    "short": "DBZ-style power level scouter with buttons",
+    "description": "Interactive Dragon Ball Z inspired power level scanner with Rescan, Saiyan Rank ladder, Compare buttons, and guild/global high scores. Café flavor text.",
+    "min_bot_version": "3.5.0",
+    "tags": [
+        "fun",
+        "games",
+        "interactive"
+    ],
+    "end_user_data_statement": "This cog stores highest power-level records (user id and display name) globally and per guild.",
+    "type": "COG"
+}

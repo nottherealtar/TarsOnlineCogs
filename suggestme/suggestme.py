@@ -160,46 +160,62 @@ class SuggestMe(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.Cog.listener()
-    async def on_reaction_add(self, reaction, user):
-        """Handle suggestion approval via reactions."""
-        if user.bot:
+    async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
+        """Handle suggestion approval via reactions (works after cache misses / restarts)."""
+        if payload.guild_id is None:
             return
-        if not reaction.message.guild:
-            return
-        if not reaction.message.embeds:
+        if payload.user_id == getattr(self.bot.user, "id", None):
             return
 
-        embed = reaction.message.embeds[0]
+        guild = self.bot.get_guild(payload.guild_id)
+        if guild is None:
+            return
+
+        channel = guild.get_channel(payload.channel_id) or self.bot.get_channel(payload.channel_id)
+        if channel is None or not isinstance(channel, discord.TextChannel):
+            return
+
+        try:
+            message = await channel.fetch_message(payload.message_id)
+        except (discord.NotFound, discord.Forbidden, discord.HTTPException):
+            return
+
+        if not message.embeds:
+            return
+
+        embed = message.embeds[0]
         if not embed.title or not embed.title.startswith("Suggestion #"):
             return
 
-        settings = await self.config.guild(reaction.message.guild).all()
+        member = payload.member
+        if member is None:
+            member = guild.get_member(payload.user_id)
+        if member is None or member.bot:
+            return
 
-        # Check staff permissions for approve/deny
+        settings = await self.config.guild(guild).all()
+
         is_staff = False
         if settings["staff_role"]:
-            staff_role = reaction.message.guild.get_role(settings["staff_role"])
-            if staff_role and staff_role in user.roles:
+            staff_role = guild.get_role(settings["staff_role"])
+            if staff_role and staff_role in member.roles:
                 is_staff = True
-        elif user.guild_permissions.manage_guild:
+        elif member.guild_permissions.manage_guild:
             is_staff = True
 
-        emoji = str(reaction.emoji)
+        emoji = str(payload.emoji)
 
         if emoji == "\U0001F44D":
-            # Check for auto-approval
-            thumbs_up = next((r for r in reaction.message.reactions if str(r.emoji) == "\U0001F44D"), None)
+            thumbs_up = next((r for r in message.reactions if str(r.emoji) == "\U0001F44D"), None)
             if thumbs_up and thumbs_up.count >= settings["required_upvotes"]:
-                await self._approve_suggestion(reaction.message, embed, thumbs_up.count, settings)
+                await self._approve_suggestion(message, embed, thumbs_up.count, settings)
 
         elif emoji == "\u2705" and is_staff:
-            # Staff approval
-            await self._approve_suggestion(reaction.message, embed, 0, settings, staff_approved=True)
+            await self._approve_suggestion(message, embed, 0, settings, staff_approved=True)
 
         elif emoji == "\u274C" and is_staff:
-            # Staff denial
             try:
-                await reaction.message.delete()
+                await message.delete()
             except (discord.Forbidden, discord.NotFound):
                 pass
 

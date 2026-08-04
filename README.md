@@ -29,13 +29,16 @@ This is a collection of cogs I have made over time—fun experiments, server uti
 | `coffeeinfo` | Display server stats in auto-updating voice channels | ![Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen) |
 | `coffeestatus` | Manage the bot's presence and activity status | ![Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen) |
 | `InfiniCount` | Counting channel where users count +1 with anti-cheat | ![Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen) |
-| `passgen` | Generates secure random passwords and sends via DM | ![Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen) |
+| `passgen` | **`/passgen`** — interactive length/symbol UI; password delivered via DM | ![Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen) |
 | `projectpost` | Interactive project announcement embed creator | ![Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen) |
 
 ### Fun & Games
 | Cog | Description | Status |
 |-----|-------------|--------|
 | `arcraiders` | Arc Raiders map rotation tracker with auto-updates | ![Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen) |
+| `beanduel` | **`/beanduel @user`** — Accept/Decline then Espresso/Latte/Cold Brew RPS; rematch + board | ![Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen) |
+| `cafeblackjack` | **`/blackjack`** — Hit/Stand/Double vs Café Dealer; **`/blackjack stats`** | ![Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen) |
+| `cafeslots` | **`/slots`** — 3-reel café slot machine with Spin button; **`/slotsboard`** | ![Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen) |
 | `chaoscoin` | **Chaos Coin:** `/chaos` flip, roll (2–100), ask — RNG with café oracle flavor (no economy) | ![Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen) |
 | `complimentroulette` | **`/compliment`** — huge pool of weirdly specific praise; optional `@user` | ![Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen) |
 | `cooldownbuddy` | **`/brb`** — easy minutes / `1h` / `at 3:30pm`; ping deflection + return proverbs | ![Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen) |
@@ -43,6 +46,8 @@ This is a collection of cogs I have made over time—fun experiments, server uti
 | `coffee` | Virtual coffee GIF (`order`), daily UTC **`checkin`** streaks, title ladder, **`board`** leaderboards | ![Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen) |
 | `howcracked` | Rate the "cracked" level with RPG-style icons | ![Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen) |
 | `howgay` | Fun rainbow percentage meter | ![Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen) |
+| `powerlevel` | **`/powerlevel`** — DBZ scouter with Rescan / Saiyan Rank / Compare; **`/powerrecord`** | ![Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen) |
+| `roasttoast` | **`/roasttoast [@user]`** — Roast / Toast / Surprise / Another Round buttons | ![Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen) |
 | `teachme` | Get random inspirational quotes from ZenQuotes | ![Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen) |
 | `thankyou` | Send thank you messages to other users | ![Passing](https://img.shields.io/static/v1?label=Cog&message=Passing&color=brightgreen) |
 

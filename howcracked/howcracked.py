@@ -26,8 +26,23 @@ class HowCracked(commands.Cog):
         """
         return random.uniform(0, 100)
 
+    async def _prune_cooldowns(self, cooldowns: dict) -> dict:
+        """Drop expired cooldown entries so the global dict cannot grow forever."""
+        cutoff = datetime.utcnow() - timedelta(hours=12)
+        pruned = {}
+        for key, ts in cooldowns.items():
+            try:
+                if datetime.fromtimestamp(ts) > cutoff:
+                    pruned[key] = ts
+            except (TypeError, ValueError, OSError):
+                continue
+        return pruned
+
     async def check_cooldown(self, user_id):
-        cooldowns = await self.config.cooldowns()
+        raw = await self.config.cooldowns()
+        cooldowns = await self._prune_cooldowns(raw)
+        if len(cooldowns) != len(raw):
+            await self.config.cooldowns.set(cooldowns)
         if str(user_id) in cooldowns:
             last_used = datetime.fromtimestamp(cooldowns[str(user_id)])
             if datetime.utcnow() - last_used < timedelta(hours=12):
@@ -35,7 +50,8 @@ class HowCracked(commands.Cog):
         return True
 
     async def update_cooldown(self, user_id):
-        cooldowns = await self.config.cooldowns()
+        raw = await self.config.cooldowns()
+        cooldowns = await self._prune_cooldowns(raw)
         cooldowns[str(user_id)] = datetime.utcnow().timestamp()
         await self.config.cooldowns.set(cooldowns)
 

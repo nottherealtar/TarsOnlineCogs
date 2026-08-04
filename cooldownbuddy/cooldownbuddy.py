@@ -314,6 +314,7 @@ class CooldownBuddy(commands.Cog):
         max_until = _utc_now() + timedelta(hours=72)
         if until_utc > max_until:
             await ctx.send("Max away length is **72 hours**. The beans refuse longer shifts.")
+            return
 
         self._cancel_timer(ctx.guild.id, ctx.author.id)
         ts = until_utc.timestamp()

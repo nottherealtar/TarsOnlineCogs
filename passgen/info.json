@@ -2,10 +2,10 @@
     "author": [
         "nottherealtar"
     ],
-    "install_msg": "`[p]passgen`",
+    "install_msg": "`/passgen` opens the button menu, or `/passgen length:16` for a quick DM. Password is never posted in the channel.",
     "name": "passgen",
-    "short": "Gens a password",
-    "description": "Generates a password according to user input.",
+    "short": "Interactive password generator (DM delivery)",
+    "description": "Button/select UI to choose password length and symbol style, then DMs the result. Optional length argument (6–32) for quick generation. No persistence.",
     "min_bot_version": "3.5.0",
     "tags": [
         "util",

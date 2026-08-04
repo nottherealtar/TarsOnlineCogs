@@ -7,7 +7,7 @@
 # 
 
 import discord
-from redbot.core import Config, commands, checks
+from redbot.core import Config, commands
 import asyncio
 import logging
 import random
@@ -25,8 +25,7 @@ class CoffeeStatus(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.config = Config.get_conf(self, 2752521001, force_registration=True)
-
-        self.presence_task = asyncio.create_task(self.maybe_update_presence())
+        self.presence_task = None
 
         default_global = {
             "botstats": True,
@@ -38,17 +37,20 @@ class CoffeeStatus(commands.Cog):
         }
         self.config.register_global(**default_global)
 
+    async def cog_load(self):
+        self.presence_task = asyncio.create_task(self.maybe_update_presence())
+
     def random_activity(self, activities, prefix):
         """Selects a random activity, replacing {prefix} with the current prefix."""
         return random.choice([a.replace("{prefix}", prefix) for a in activities])
 
     def cog_unload(self):
-        if hasattr(self, "presence_task"):
+        if self.presence_task is not None:
             self.presence_task.cancel()
 
     @commands.group(autohelp=True)
     @commands.guild_only()
-    @checks.is_owner()
+    @commands.is_owner()
     async def coffeestatus(self, ctx):
         """
         Manage the bot's status and activity display.

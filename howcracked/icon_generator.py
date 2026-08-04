@@ -1,7 +1,11 @@
 from PIL import Image, ImageDraw, ImageFont
 import os
 from functools import lru_cache
-from datetime import datetime
+from pathlib import Path
+
+# Stable per-cog cache dir (not dependent on process cwd)
+_CACHE_DIR = Path(__file__).resolve().parent / "icons_cache"
+
 
 @lru_cache(maxsize=100)
 def generate_icon(level):
@@ -9,22 +13,18 @@ def generate_icon(level):
     Generate an RPG-style icon for the given level.
     """
     try:
-        # Define icon size and colors
         size = (200, 200)
         background_color = (255, 255, 255)
         text_color = (0, 0, 0)
 
-        # Create a blank image
-        image = Image.new('RGB', size, background_color)
+        image = Image.new("RGB", size, background_color)
         draw = ImageDraw.Draw(image)
 
-        # Load a font
         try:
             font = ImageFont.load_default()
         except IOError:
             raise Exception("Font file not found.")
 
-        # Define fighting components
         components = {
             "On-Crack": "🔥",
             "Butt-Crack-ed": "👊",
@@ -44,8 +44,7 @@ def generate_icon(level):
             "Ultra Mega Super Cracked": "⚔️",
         }
 
-        # Draw text and component
-        text = level[:2]  # Use first 2 letters of the level for simplicity
+        text = level[:2]
         component = components.get(level, "✨")
         combined_text = f"{text}\n{component}"
         text_bbox = draw.textbbox((0, 0), combined_text, font=font)
@@ -54,26 +53,27 @@ def generate_icon(level):
         text_position = ((size[0] - text_width) / 2, (size[1] - text_height) / 2)
         draw.text(text_position, combined_text, fill=text_color, font=font)
 
-        # Save the image to a temporary file
-        temp_dir = "icons_cache"
-        os.makedirs(temp_dir, exist_ok=True)
-        timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S%f")
-        file_path = os.path.join(temp_dir, f"{level}_{timestamp}.png")
-        image.save(file_path)
+        _CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        safe = "".join(c if c.isalnum() or c in "-_" else "_" for c in level)
+        file_path = _CACHE_DIR / f"{safe}.png"
+        if not file_path.exists():
+            image.save(file_path)
 
-        return file_path
+        return str(file_path)
     except Exception as e:
         print(f"Error generating icon for level {level}: {e}")
         return None
+
 
 def clear_icon_cache():
     """
     Clear the icon cache.
     """
     generate_icon.cache_clear()
-    temp_dir = "icons_cache"
-    if os.path.exists(temp_dir):
-        for file in os.listdir(temp_dir):
-            file_path = os.path.join(temp_dir, file)
-            if os.path.isfile(file_path):
-                os.unlink(file_path)
+    if _CACHE_DIR.exists():
+        for file in _CACHE_DIR.iterdir():
+            if file.is_file():
+                try:
+                    file.unlink()
+                except OSError:
+                    pass

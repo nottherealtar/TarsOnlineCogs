@@ -1,0 +1,18 @@
+{
+    "author": [
+        "nottherealtar"
+    ],
+    "install_msg": "`/blackjack` to sit at the Café Dealer's table. Hit, Stand, Double buttons. `/blackjack stats` for your record. Cog package name is **cafeblackjack**.",
+    "name": "cafeblackjack",
+    "short": "Button blackjack vs the Café Dealer",
+    "description": "Interactive blackjack with Hit/Stand/Double/New Hand buttons. Soft aces, dealer stands on 17, natural blackjack messaging. Per-guild win/loss/push stats. No real currency. Package name cafeblackjack avoids clashes with other blackjack cogs.",
+    "min_bot_version": "3.5.0",
+    "tags": [
+        "fun",
+        "games",
+        "interactive",
+        "cards"
+    ],
+    "end_user_data_statement": "This cog stores per-member blackjack wins, losses, and pushes in each guild.",
+    "type": "COG"
+}

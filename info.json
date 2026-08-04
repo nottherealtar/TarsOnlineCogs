@@ -1,0 +1,9 @@
+{
+    "author": [
+        "nottherealtar"
+    ],
+    "install_msg": "Thanks for adding **TarsOnlineCafe**! Install a cog with `[p]cog install TarsOnlineCafe <cogname>`, then `[p]load <cogname>`. See the README for the full list. Dev server: https://discord.gg/CsR9zECCQt",
+    "name": "TarsOnlineCafe",
+    "short": "Fun café-themed games and server utility cogs for Red",
+    "description": "A collection of interactive fun cogs and server utilities for Red-DiscordBot — café vibes, button games, moderation helpers, and community tools by nottherealtar."
+}

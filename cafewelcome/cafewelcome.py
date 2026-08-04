@@ -24,6 +24,16 @@ from redbot.core.utils import can_user_send_messages_in
 log = logging.getLogger("red.nottherealtar.cafewelcome")
 
 
+def _activity_name(member: discord.Member) -> str:
+    """Resolve a displayable activity name (discord.py removed Member.activity)."""
+    activities = getattr(member, "activities", None) or ()
+    for act in activities:
+        name = getattr(act, "name", None)
+        if name:
+            return name
+    return "UNDETECTED"
+
+
 class CafeWelcome(commands.Cog):
     """Welcome users to your server using BytesToBits' image generation."""
 
@@ -208,7 +218,7 @@ class CafeWelcome(commands.Cog):
                 f"Subject ID: #{str(member.guild.member_count).zfill(4)}",
                 member.created_at.strftime("Since %B %d, %Y"),
                 f"Status: {member.status.name.upper()}",
-            ] + textwrap.wrap(f"Activity: {member.activity.name if member.activity else 'UNDETECTED'}", 34)
+            ] + textwrap.wrap(f"Activity: {_activity_name(member)}", 34)
 
             for index, line in enumerate(WELCOME_TEXT):
                 for letter_range in range(len(line)):
